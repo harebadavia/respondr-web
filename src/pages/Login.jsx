@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { apiRequest } from "../services/api";
@@ -81,6 +81,10 @@ export default function Login() {
 
         {error && <p style={{ color: "red" }}>{error}</p>}
       </form>
+
+      <p style={{ marginTop: 16 }}>
+        No account yet? <Link to="/register">Register</Link>
+      </p>
     </div>
   );
 }
