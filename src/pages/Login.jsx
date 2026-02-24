@@ -17,7 +17,6 @@ export default function Login() {
     setError("");
 
     try {
-      // 1️⃣ Firebase login
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
@@ -25,27 +24,23 @@ export default function Login() {
       );
 
       const firebaseUser = userCredential.user;
-
-      // 2️⃣ Get ID token
       const token = await firebaseUser.getIdToken();
 
-      // 3️⃣ Verify with backend
       const backendUser = await apiRequest("/auth/me", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      // 4️⃣ Store in context
       login({ firebaseUser, backendUser, token });
 
-      // 5️⃣ Role-based redirect
-      if (backendUser.role === "official") {
-        navigate("/official");
+      if (backendUser.role === "admin") {
+        navigate("/admin/dashboard");
+      } else if (backendUser.role === "official") {
+        navigate("/official/dashboard");
       } else {
-        navigate("/resident");
+        navigate("/resident/dashboard");
       }
-
     } catch (err) {
       console.error(err);
       setError("Invalid email or password");

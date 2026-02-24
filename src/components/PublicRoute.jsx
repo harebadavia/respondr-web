@@ -6,10 +6,16 @@ export default function PublicRoute({ children }) {
 
   if (loading) return <div>Loading...</div>;
 
-  // If already logged in, kick them out of login/register pages
-  if (isAuthenticated) {
-    if (backendUser.role === "official") return <Navigate to="/official" replace />;
-    return <Navigate to="/resident" replace />;
+  if (isAuthenticated && backendUser) {
+    if (backendUser.role === "admin") {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+
+    if (backendUser.role === "official") {
+      return <Navigate to="/official/dashboard" replace />;
+    }
+
+    return <Navigate to="/resident/dashboard" replace />;
   }
 
   return children;
