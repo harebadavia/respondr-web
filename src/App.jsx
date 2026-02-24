@@ -10,6 +10,7 @@ import OfficialLayout from "./layouts/OfficialLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import ResidentIncidentsNew from "./pages/ResidentIncidentsNew";
 import ResidentIncidentsList from "./pages/ResidentIncidentsList";
+import ResidentIncidentDetail from "./pages/ResidentIncidentDetail";
 import OfficialIncidents from "./pages/OfficialIncidents";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
@@ -48,6 +49,7 @@ function App() {
           <Route path="dashboard" element={<ResidentDashboard />} />
           <Route path="incidents/new" element={<ResidentIncidentsNew />} />
           <Route path="incidents" element={<ResidentIncidentsList />} />
+          <Route path="incidents/:id" element={<ResidentIncidentDetail />} />
         </Route>
 
         <Route
