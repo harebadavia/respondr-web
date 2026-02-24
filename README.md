@@ -27,11 +27,7 @@ A React + Vite web application for RESPONDR — a role-based emergency response 
 
 2. **Configure environment variables**
 
-   Copy `.env.example` to `.env` and fill in your values (see [Environment Variables](#environment-variables) below):
-
-   ```bash
-   cp .env.example .env
-   ```
+   Create a `.env` file in the project root and fill in your values (see [Environment Variables](#environment-variables) below).
 
 3. **Start the dev server**
 
