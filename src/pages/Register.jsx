@@ -33,7 +33,6 @@ export default function Register() {
     setSubmitting(true);
 
     try {
-      // 1) Create Firebase user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         form.email,
@@ -41,11 +40,8 @@ export default function Register() {
       );
 
       const firebaseUser = userCredential.user;
-
-      // 2) Get Firebase ID token (optional now, useful later)
       const token = await firebaseUser.getIdToken();
 
-      // 3) Create DB user record (schema requires first/last name)
       const backendUser = await apiRequest("/auth/register", {
         method: "POST",
         body: JSON.stringify({
@@ -57,15 +53,10 @@ export default function Register() {
         }),
       });
 
-      // 4) Store in AuthContext
       login({ firebaseUser, backendUser, token });
-
-      // 5) Redirect (role is default resident)
-      navigate("/resident");
+      navigate("/resident/dashboard");
     } catch (err) {
       console.error(err);
-
-      // Basic friendly errors (kept simple for MVP)
       setError(err.message || "Registration failed. Please try again.");
     } finally {
       setSubmitting(false);
