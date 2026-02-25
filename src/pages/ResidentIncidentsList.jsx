@@ -480,6 +480,28 @@ export default function ResidentIncidentsList() {
                 <p className="mt-2 text-sm text-neutral-600">No attachment</p>
               )}
             </div>
+
+            <section>
+              <h4 className="text-sm font-semibold text-neutral-900">Barangay Responses</h4>
+              {Array.isArray(selectedIncident.responses) && selectedIncident.responses.length > 0 ? (
+                <div className="mt-2 space-y-2">
+                  {selectedIncident.responses.map((response) => (
+                    <Card key={response.id} className="border-neutral-200 bg-neutral-50">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-neutral-900">
+                          {`${response.responded_by_first_name || ""} ${response.responded_by_last_name || ""}`.trim() ||
+                            "Barangay Official"}
+                        </p>
+                        <p className="text-xs text-neutral-600">{new Date(response.created_at).toLocaleString()}</p>
+                      </div>
+                      <p className="mt-2 text-sm text-neutral-700">{response.message}</p>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-neutral-600">No barangay responses yet.</p>
+              )}
+            </section>
           </div>
         )}
       </Modal>
