@@ -1,9 +1,17 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
+import { FaGaugeHigh, FaListCheck, FaUsersGear } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
+import AppShell from "./AppShell";
 
 export default function AdminLayout() {
   const { backendUser, logout } = useAuth();
   const navigate = useNavigate();
+
+  const modules = [
+    { label: "Dashboard", to: "/admin/dashboard", icon: FaGaugeHigh },
+    { label: "Users", to: "/admin/users", icon: FaUsersGear },
+    { label: "Official View", to: "/official/dashboard", icon: FaListCheck },
+  ];
 
   const handleLogout = async () => {
     await logout();
@@ -11,26 +19,14 @@ export default function AdminLayout() {
   };
 
   return (
-    <div style={{ maxWidth: 980, margin: "24px auto", padding: "0 16px" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h2 style={{ marginBottom: 4 }}>RESPONDR Admin</h2>
-          <small>
-            {backendUser?.first_name} {backendUser?.last_name} ({backendUser?.role})
-          </small>
-        </div>
-        <button onClick={handleLogout}>Logout</button>
-      </header>
-
-      <nav style={{ display: "flex", gap: 12, margin: "16px 0" }}>
-        <Link to="/admin/dashboard">Dashboard</Link>
-        <Link to="/admin/users">Users</Link>
-        <Link to="/official/dashboard">Official View</Link>
-      </nav>
-
-      <main>
-        <Outlet />
-      </main>
-    </div>
+    <AppShell
+      title="Admin"
+      role={backendUser?.role}
+      userFirstName={backendUser?.first_name}
+      modules={modules}
+      onLogout={handleLogout}
+    >
+      <Outlet />
+    </AppShell>
   );
 }

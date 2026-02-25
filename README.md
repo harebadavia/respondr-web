@@ -84,3 +84,16 @@ Both routes are wrapped in `ProtectedRoute`, which redirects unauthenticated use
 | `npm run build`   | Build for production               |
 | `npm run preview` | Preview the production build       |
 | `npm run lint`    | Run ESLint                         |
+
+## Styling System (Web + Mobile Consistency)
+
+- Web styling uses **Tailwind CSS** with a shared token preset from `../respondr-design-tokens/web-tailwind-preset.cjs`.
+- Reusable UI primitives live in `src/components/ui/`.
+- Avoid adding hardcoded colors and fonts in pages; update the token source first.
+
+### Token update checklist
+
+1. Update `../respondr-design-tokens/tokens.json`
+2. Validate web UI (`npm run build`)
+3. Sync mobile token mappings in `respondr-mobile/respondr-mobile/constants/theme.ts`
+4. Verify status colors (`pending`, `verified`, `in_progress`, `resolved`, `rejected`)
