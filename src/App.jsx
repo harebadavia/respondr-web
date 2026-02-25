@@ -12,6 +12,8 @@ import ResidentIncidentsNew from "./pages/ResidentIncidentsNew";
 import ResidentIncidentsList from "./pages/ResidentIncidentsList";
 import ResidentIncidentDetail from "./pages/ResidentIncidentDetail";
 import OfficialIncidents from "./pages/OfficialIncidents";
+import OfficialMap from "./pages/OfficialMap";
+import OfficialLocations from "./pages/OfficialLocations";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 
@@ -63,6 +65,8 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<OfficialDashboard />} />
           <Route path="incidents" element={<OfficialIncidents />} />
+          <Route path="map" element={<OfficialMap />} />
+          <Route path="locations" element={<OfficialLocations />} />
         </Route>
 
         <Route

@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { FaGaugeHigh, FaListCheck, FaScrewdriverWrench } from "react-icons/fa6";
+import { FaGaugeHigh, FaListCheck, FaMapLocationDot, FaLocationDot, FaScrewdriverWrench } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "./AppShell";
 
@@ -10,6 +10,8 @@ export default function OfficialLayout() {
   const modules = [
     { label: "Dashboard", to: "/official/dashboard", icon: FaGaugeHigh },
     { label: "Incident Queue", to: "/official/incidents", icon: FaListCheck },
+    { label: "Map", to: "/official/map", icon: FaMapLocationDot },
+    { label: "Locations", to: "/official/locations", icon: FaLocationDot },
     ...(backendUser?.role === "admin"
       ? [{ label: "Admin", to: "/admin/dashboard", icon: FaScrewdriverWrench }]
       : []),
