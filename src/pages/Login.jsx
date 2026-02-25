@@ -4,6 +4,11 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { apiRequest } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import Alert from "../components/ui/Alert";
+import PageContainer from "../components/ui/PageContainer";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,12 +22,7 @@ export default function Login() {
     setError("");
 
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       const token = await firebaseUser.getIdToken();
 
@@ -48,38 +48,24 @@ export default function Login() {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: "100px auto" }}>
-      <h2>Login to RESPONDR</h2>
+    <PageContainer className="flex min-h-[70vh] items-center justify-center">
+      <Card className="w-full max-w-md">
+        <h2 className="mb-1 text-2xl font-bold text-neutral-900">Login to RESPONDR</h2>
+        <p className="mb-5 text-sm text-neutral-600">Sign in to submit and track incidents.</p>
 
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            required
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
+        <form onSubmit={handleLogin} className="space-y-3">
+          <Input type="email" label="Email" value={email} required onChange={(e) => setEmail(e.target.value)} />
+          <Input type="password" label="Password" value={password} required onChange={(e) => setPassword(e.target.value)} />
 
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            required
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+          <Button type="submit" className="w-full">Login</Button>
 
-        <button type="submit">Login</button>
+          {error && <Alert tone="error">{error}</Alert>}
+        </form>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
-      </form>
-
-      <p style={{ marginTop: 16 }}>
-        No account yet? <Link to="/register">Register</Link>
-      </p>
-    </div>
+        <p className="mt-4 text-sm text-neutral-700">
+          No account yet? <Link to="/register">Register</Link>
+        </p>
+      </Card>
+    </PageContainer>
   );
 }

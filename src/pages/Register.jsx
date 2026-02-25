@@ -4,6 +4,11 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { apiRequest } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import Alert from "../components/ui/Alert";
+import PageContainer from "../components/ui/PageContainer";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -33,12 +38,7 @@ export default function Register() {
     setSubmitting(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        form.email,
-        form.password
-      );
-
+      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       const firebaseUser = userCredential.user;
       const token = await firebaseUser.getIdToken();
 
@@ -64,76 +64,32 @@ export default function Register() {
   };
 
   return (
-    <div style={{ maxWidth: 420, margin: "80px auto" }}>
-      <h2>Create your RESPONDR account</h2>
+    <PageContainer className="flex min-h-[75vh] items-center justify-center">
+      <Card className="w-full max-w-lg">
+        <h2 className="mb-1 text-2xl font-bold text-neutral-900">Create your RESPONDR account</h2>
+        <p className="mb-5 text-sm text-neutral-600">Resident self-registration for incident reporting.</p>
 
-      <form onSubmit={handleRegister}>
-        <div style={{ marginBottom: 12 }}>
-          <label>First name</label>
-          <input
-            name="first_name"
-            value={form.first_name}
-            onChange={onChange}
-            required
-            placeholder="Juan"
-          />
-        </div>
+        <form onSubmit={handleRegister} className="grid gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Input name="first_name" label="First name" value={form.first_name} onChange={onChange} required placeholder="Juan" />
+            <Input name="last_name" label="Last name" value={form.last_name} onChange={onChange} required placeholder="Dela Cruz" />
+          </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>Last name</label>
-          <input
-            name="last_name"
-            value={form.last_name}
-            onChange={onChange}
-            required
-            placeholder="Dela Cruz"
-          />
-        </div>
+          <Input name="phone_number" label="Phone number (optional)" value={form.phone_number} onChange={onChange} placeholder="09xxxxxxxxx" />
+          <Input type="email" name="email" label="Email" value={form.email} onChange={onChange} required placeholder="email@example.com" />
+          <Input type="password" name="password" label="Password" value={form.password} onChange={onChange} required placeholder="Min 6 characters" />
 
-        <div style={{ marginBottom: 12 }}>
-          <label>Phone number (optional)</label>
-          <input
-            name="phone_number"
-            value={form.phone_number}
-            onChange={onChange}
-            placeholder="09xxxxxxxxx"
-          />
-        </div>
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Creating account..." : "Register"}
+          </Button>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>Email</label>
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={onChange}
-            required
-            placeholder="email@example.com"
-          />
-        </div>
+          {error && <Alert tone="error">{error}</Alert>}
+        </form>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>Password</label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={onChange}
-            required
-            placeholder="Min 6 characters"
-          />
-        </div>
-
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Creating account..." : "Register"}
-        </button>
-
-        {error && <p style={{ color: "red", marginTop: 10 }}>{error}</p>}
-      </form>
-
-      <p style={{ marginTop: 16 }}>
-        Already have an account? <Link to="/">Login</Link>
-      </p>
-    </div>
+        <p className="mt-4 text-sm text-neutral-700">
+          Already have an account? <Link to="/">Login</Link>
+        </p>
+      </Card>
+    </PageContainer>
   );
 }
