@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { apiRequest } from "../services/api";
+import { ensurePushRegistration, unregisterStoredPushToken } from "../services/pushMessaging";
 
 const AuthContext = createContext();
 
@@ -11,26 +12,34 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 Auto-login on refresh
+  // Auto-login on refresh
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const newToken = await user.getIdToken();
 
-          const backendUser = await apiRequest("/auth/me", {
+          const nextBackendUser = await apiRequest("/auth/me", {
             headers: {
               Authorization: `Bearer ${newToken}`,
             },
           });
 
           setFirebaseUser(user);
-          setBackendUser(backendUser);
+          setBackendUser(nextBackendUser);
           setToken(newToken);
+
+          ensurePushRegistration(newToken).catch((err) => {
+            console.warn("Push registration failed:", err?.message || err);
+          });
         } catch (err) {
           console.error("Auto-login failed:", err);
           await signOut(auth);
         }
+      } else {
+        setFirebaseUser(null);
+        setBackendUser(null);
+        setToken(null);
       }
 
       setLoading(false);
@@ -39,13 +48,23 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const login = ({ firebaseUser, backendUser, token }) => {
-    setFirebaseUser(firebaseUser);
-    setBackendUser(backendUser);
-    setToken(token);
+  const login = ({ firebaseUser: nextFirebaseUser, backendUser: nextBackendUser, token: nextToken }) => {
+    setFirebaseUser(nextFirebaseUser);
+    setBackendUser(nextBackendUser);
+    setToken(nextToken);
+
+    ensurePushRegistration(nextToken).catch((err) => {
+      console.warn("Push registration failed:", err?.message || err);
+    });
   };
 
   const logout = async () => {
+    const currentToken = token;
+
+    if (currentToken) {
+      await unregisterStoredPushToken(currentToken);
+    }
+
     await signOut(auth);
     setFirebaseUser(null);
     setBackendUser(null);

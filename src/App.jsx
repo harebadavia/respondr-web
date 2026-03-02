@@ -11,9 +11,13 @@ import AdminLayout from "./layouts/AdminLayout";
 import ResidentIncidentsNew from "./pages/ResidentIncidentsNew";
 import ResidentIncidentsList from "./pages/ResidentIncidentsList";
 import ResidentIncidentDetail from "./pages/ResidentIncidentDetail";
+import ResidentAlerts from "./pages/ResidentAlerts";
+import ResidentAnnouncements from "./pages/ResidentAnnouncements";
 import OfficialIncidents from "./pages/OfficialIncidents";
 import OfficialMap from "./pages/OfficialMap";
 import OfficialLocations from "./pages/OfficialLocations";
+import OfficialAlerts from "./pages/OfficialAlerts";
+import OfficialAnnouncements from "./pages/OfficialAnnouncements";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 
@@ -52,6 +56,8 @@ function App() {
           <Route path="incidents/new" element={<ResidentIncidentsNew />} />
           <Route path="incidents" element={<ResidentIncidentsList />} />
           <Route path="incidents/:id" element={<ResidentIncidentDetail />} />
+          <Route path="alerts" element={<ResidentAlerts />} />
+          <Route path="announcements" element={<ResidentAnnouncements />} />
         </Route>
 
         <Route
@@ -67,6 +73,8 @@ function App() {
           <Route path="incidents" element={<OfficialIncidents />} />
           <Route path="map" element={<OfficialMap />} />
           <Route path="locations" element={<OfficialLocations />} />
+          <Route path="alerts" element={<OfficialAlerts />} />
+          <Route path="announcements" element={<OfficialAnnouncements />} />
         </Route>
 
         <Route
