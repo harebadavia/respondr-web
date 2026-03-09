@@ -11,7 +11,7 @@ import {
 } from "react-icons/fa";
 import { storage } from "../firebase";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../services/api";
+import { apiAuthRequest } from "../services/api";
 import { uploadIncidentImage } from "../services/storage";
 import Card from "../components/ui/Card";
 import StatusChip from "../components/ui/StatusChip";
@@ -30,7 +30,7 @@ const categoryIcons = {
 };
 
 export default function ResidentIncidentsList() {
-  const { token, firebaseUser } = useAuth();
+  const { isAuthenticated, firebaseUser } = useAuth();
 
   const [incidents, setIncidents] = useState([]);
   const [loadingIncidents, setLoadingIncidents] = useState(true);
@@ -78,11 +78,7 @@ export default function ResidentIncidentsList() {
     setIncidentsError("");
 
     try {
-      const data = await apiRequest("/incidents/my", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const data = await apiAuthRequest("/incidents/my");
       setIncidents(Array.isArray(data) ? data : []);
     } catch (err) {
       setIncidentsError(err.message || "Failed to load reports");
@@ -96,11 +92,7 @@ export default function ResidentIncidentsList() {
     setCategoriesError("");
 
     try {
-      const data = await apiRequest("/incident-categories", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const data = await apiAuthRequest("/incident-categories");
       setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       setCategoriesError(err.message || "Failed to load categories");
@@ -110,12 +102,11 @@ export default function ResidentIncidentsList() {
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     loadIncidents();
     loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isAuthenticated]);
 
   const onChange = (event) => {
     setForm((prev) => ({
@@ -161,11 +152,8 @@ export default function ResidentIncidentsList() {
   };
 
   const registerAttachment = async (incidentId, metadata) => {
-    return apiRequest(`/incidents/${incidentId}/attachments`, {
+    return apiAuthRequest(`/incidents/${incidentId}/attachments`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
       body: JSON.stringify(metadata),
     });
   };
@@ -213,11 +201,8 @@ export default function ResidentIncidentsList() {
         throw new Error("Title and description are required.");
       }
 
-      const incident = await apiRequest("/incidents", {
+      const incident = await apiAuthRequest("/incidents", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
 
@@ -259,11 +244,7 @@ export default function ResidentIncidentsList() {
     setSelectedIncidentImageUrl("");
 
     try {
-      const data = await apiRequest(`/incidents/${incidentId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const data = await apiAuthRequest(`/incidents/${incidentId}`);
 
       setSelectedIncident(data);
 

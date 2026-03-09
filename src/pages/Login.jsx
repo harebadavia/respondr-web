@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
-import { apiRequest } from "../services/api";
+import { apiAuthRequest } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -26,11 +26,7 @@ export default function Login() {
       const firebaseUser = userCredential.user;
       const token = await firebaseUser.getIdToken();
 
-      const backendUser = await apiRequest("/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const backendUser = await apiAuthRequest("/auth/me");
 
       login({ firebaseUser, backendUser, token });
 

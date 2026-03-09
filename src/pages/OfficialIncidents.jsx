@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
 import { storage } from "../firebase";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../services/api";
+import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import StatusChip from "../components/ui/StatusChip";
 import Alert from "../components/ui/Alert";
@@ -41,7 +41,7 @@ function formatReporterName(incident) {
 }
 
 export default function OfficialIncidents() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [incidents, setIncidents] = useState([]);
   const [loadingIncidents, setLoadingIncidents] = useState(true);
@@ -70,11 +70,7 @@ export default function OfficialIncidents() {
     setIncidentsError("");
 
     try {
-      const data = await apiRequest("/incidents", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const data = await apiAuthRequest("/incidents");
       setIncidents(Array.isArray(data) ? data : []);
     } catch (err) {
       setIncidentsError(err.message || "Failed to load incident queue");
@@ -84,10 +80,9 @@ export default function OfficialIncidents() {
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     loadIncidents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isAuthenticated]);
 
   const visibleIncidents = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -142,11 +137,7 @@ export default function OfficialIncidents() {
     setResponseError("");
 
     try {
-      const data = await apiRequest(`/incidents/${incidentId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const data = await apiAuthRequest(`/incidents/${incidentId}`);
 
       setSelectedIncident(data);
 
@@ -163,11 +154,7 @@ export default function OfficialIncidents() {
   };
 
   const refreshIncidentDetail = async (incidentId) => {
-    const data = await apiRequest(`/incidents/${incidentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const data = await apiAuthRequest(`/incidents/${incidentId}`);
 
     setSelectedIncident(data);
     mergeIncidentIntoQueue(data);
@@ -189,11 +176,8 @@ export default function OfficialIncidents() {
     setStatusActionMessage("");
 
     try {
-      const updated = await apiRequest(`/incidents/${selectedIncident.id}/status`, {
+      const updated = await apiAuthRequest(`/incidents/${selectedIncident.id}/status`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ status: nextStatus }),
       });
 
@@ -232,11 +216,8 @@ export default function OfficialIncidents() {
     setResponseMessage("");
 
     try {
-      const created = await apiRequest(`/incidents/${selectedIncident.id}/response`, {
+      const created = await apiAuthRequest(`/incidents/${selectedIncident.id}/response`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ message }),
       });
 
