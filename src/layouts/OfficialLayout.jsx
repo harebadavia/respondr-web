@@ -12,6 +12,9 @@ export default function OfficialLayout() {
     { label: "Incident Queue", to: "/official/incidents", icon: FaListCheck },
     { label: "Map", to: "/official/map", icon: FaMapLocationDot },
     { label: "Locations", to: "/official/locations", icon: FaLocationDot },
+    { label: "Alerts", to: "/official/alerts", icon: FaBell },
+    { label: "SMS Logs", to: "/official/sms-logs", icon: FaBell },
+    { label: "Announcements", to: "/official/announcements", icon: FaBullhorn },
     ...(backendUser?.role === "admin"
       ? [{ label: "Admin", to: "/admin/dashboard", icon: FaScrewdriverWrench }]
       : []),

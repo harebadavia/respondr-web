@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../services/api";
+import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
@@ -29,7 +29,7 @@ function categoryText(incident) {
 }
 
 export default function OfficialMap() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [incidents, setIncidents] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -50,15 +50,9 @@ export default function OfficialMap() {
 
     try {
       const [incidentsData, locationsData, categoriesData] = await Promise.all([
-        apiRequest("/incidents", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        apiRequest("/locations?include_inactive=true", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        apiRequest("/incident-categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        apiAuthRequest("/incidents"),
+        apiAuthRequest("/locations?include_inactive=true"),
+        apiAuthRequest("/incident-categories"),
       ]);
 
       setIncidents(Array.isArray(incidentsData) ? incidentsData : []);
@@ -72,10 +66,9 @@ export default function OfficialMap() {
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isAuthenticated]);
 
   const parentCategoryOptions = categories;
   const selectedParent = categories.find((cat) => cat.id === parentCategoryFilter);

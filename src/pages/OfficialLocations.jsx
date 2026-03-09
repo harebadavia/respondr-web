@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../services/api";
+import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
@@ -27,7 +27,7 @@ function toPayload(form) {
 }
 
 export default function OfficialLocations() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,9 +44,7 @@ export default function OfficialLocations() {
     setError("");
 
     try {
-      const data = await apiRequest("/locations?include_inactive=true", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const data = await apiAuthRequest("/locations?include_inactive=true");
       setLocations(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "Failed to load locations");
@@ -56,10 +54,9 @@ export default function OfficialLocations() {
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     loadLocations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isAuthenticated]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -107,16 +104,14 @@ export default function OfficialLocations() {
       }
 
       if (editingId) {
-        await apiRequest(`/locations/${editingId}`, {
+        await apiAuthRequest(`/locations/${editingId}`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
           body: JSON.stringify(payload),
         });
         setMessage("Location updated.");
       } else {
-        await apiRequest("/locations", {
+        await apiAuthRequest("/locations", {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
           body: JSON.stringify(payload),
         });
         setMessage("Location created.");
@@ -137,15 +132,13 @@ export default function OfficialLocations() {
 
     try {
       if (!isActive) {
-        await apiRequest(`/locations/${location.id}`, {
+        await apiAuthRequest(`/locations/${location.id}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
         });
         setMessage("Location deactivated.");
       } else {
-        await apiRequest(`/locations/${location.id}`, {
+        await apiAuthRequest(`/locations/${location.id}`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
           body: JSON.stringify({ is_active: true }),
         });
         setMessage("Location reactivated.");

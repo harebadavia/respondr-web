@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { apiRequest } from "../services/api";
+import { apiAuthRequest } from "../services/api";
+import { ensurePushRegistration, unregisterStoredPushToken } from "../services/pushMessaging";
 
 const AuthContext = createContext();
 
@@ -18,15 +19,15 @@ export function AuthProvider({ children }) {
         try {
           const newToken = await user.getIdToken();
 
-          const backendUser = await apiRequest("/auth/me", {
-            headers: {
-              Authorization: `Bearer ${newToken}`,
-            },
-          });
+          const nextBackendUser = await apiAuthRequest("/auth/me");
 
           setFirebaseUser(user);
           setBackendUser(backendUser);
           setToken(newToken);
+
+          ensurePushRegistration().catch((err) => {
+            console.warn("Push registration failed:", err?.message || err);
+          });
         } catch (err) {
           console.error("Auto-login failed:", err);
           await signOut(auth);
@@ -39,13 +40,19 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const login = ({ firebaseUser, backendUser, token }) => {
-    setFirebaseUser(firebaseUser);
-    setBackendUser(backendUser);
-    setToken(token);
+  const login = ({ firebaseUser: nextFirebaseUser, backendUser: nextBackendUser, token: nextToken }) => {
+    setFirebaseUser(nextFirebaseUser);
+    setBackendUser(nextBackendUser);
+    setToken(nextToken);
+
+    ensurePushRegistration().catch((err) => {
+      console.warn("Push registration failed:", err?.message || err);
+    });
   };
 
   const logout = async () => {
+    await unregisterStoredPushToken();
+
     await signOut(auth);
     setFirebaseUser(null);
     setBackendUser(null);

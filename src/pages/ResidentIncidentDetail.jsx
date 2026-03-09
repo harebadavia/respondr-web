@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { getDownloadURL, ref } from "firebase/storage";
 import { storage } from "../firebase";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../services/api";
+import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import StatusChip from "../components/ui/StatusChip";
 import Alert from "../components/ui/Alert";
@@ -11,7 +11,7 @@ import PageContainer from "../components/ui/PageContainer";
 
 export default function ResidentIncidentDetail() {
   const { id } = useParams();
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [incident, setIncident] = useState(null);
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -20,11 +20,7 @@ export default function ResidentIncidentDetail() {
   useEffect(() => {
     async function loadIncident() {
       try {
-        const data = await apiRequest(`/incidents/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const data = await apiAuthRequest(`/incidents/${id}`);
 
         setIncident(data);
 
@@ -40,10 +36,10 @@ export default function ResidentIncidentDetail() {
       }
     }
 
-    if (token && id) {
+    if (isAuthenticated && id) {
       loadIncident();
     }
-  }, [id, token]);
+  }, [id, isAuthenticated]);
 
   return (
     <PageContainer className="px-0 py-0">
