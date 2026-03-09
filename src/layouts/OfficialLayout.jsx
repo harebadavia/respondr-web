@@ -1,5 +1,13 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { FaGaugeHigh, FaListCheck, FaMapLocationDot, FaLocationDot, FaScrewdriverWrench } from "react-icons/fa6";
+import {
+  FaGaugeHigh,
+  FaListCheck,
+  FaMapLocationDot,
+  FaLocationDot,
+  FaScrewdriverWrench,
+  FaBell,
+  FaBullhorn,
+} from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "./AppShell";
 
