@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 Auto-login on refresh
+  // Auto-login on refresh
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
           const nextBackendUser = await apiAuthRequest("/auth/me");
 
           setFirebaseUser(user);
-          setBackendUser(backendUser);
+          setBackendUser(nextBackendUser);
           setToken(newToken);
 
           ensurePushRegistration().catch((err) => {
@@ -31,7 +31,14 @@ export function AuthProvider({ children }) {
         } catch (err) {
           console.error("Auto-login failed:", err);
           await signOut(auth);
+          setFirebaseUser(null);
+          setBackendUser(null);
+          setToken(null);
         }
+      } else {
+        setFirebaseUser(null);
+        setBackendUser(null);
+        setToken(null);
       }
 
       setLoading(false);
