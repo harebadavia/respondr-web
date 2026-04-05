@@ -23,6 +23,8 @@ export default function AdminLayout() {
       title="Admin"
       role={backendUser?.role}
       userFirstName={backendUser?.first_name}
+      userEmail={backendUser?.email}
+      profileTo="/admin/profile"
       modules={modules}
       onLogout={handleLogout}
     >

@@ -10,7 +10,7 @@ function readPersistedCollapsed() {
   return stored === "true";
 }
 
-export default function AppShell({ role, userFirstName, modules, onLogout, children }) {
+export default function AppShell({ role, userFirstName, userEmail, profileTo, modules, onLogout, children }) {
   const [collapsed, setCollapsed] = useState(readPersistedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -37,14 +37,16 @@ export default function AppShell({ role, userFirstName, modules, onLogout, child
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
       <div className="flex min-h-screen">
         <aside
-          className={`hidden border-r border-neutral-200 bg-white transition-[width] duration-200 md:block ${desktopSidebarWidth}`}
+          className={`hidden border-r border-neutral-200 bg-white transition-[width] duration-200 md:sticky md:top-0 md:block md:h-screen md:self-start ${desktopSidebarWidth}`}
         >
           <SideNav
             collapsed={collapsed}
             onToggleCollapsed={() => setCollapsed((prev) => !prev)}
             modules={modules}
             firstName={userFirstName}
+            email={userEmail}
             role={role}
+            profileTo={profileTo}
             onLogout={onLogout}
             onNavigate={() => {}}
           />
@@ -61,7 +63,9 @@ export default function AppShell({ role, userFirstName, modules, onLogout, child
                 onToggleCollapsed={() => setCollapsed((prev) => !prev)}
                 modules={modules}
                 firstName={userFirstName}
+                email={userEmail}
                 role={role}
+                profileTo={profileTo}
                 onLogout={onLogout}
                 mobile
                 onNavigate={() => setMobileOpen(false)}

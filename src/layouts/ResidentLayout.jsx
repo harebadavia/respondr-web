@@ -24,6 +24,8 @@ export default function ResidentLayout() {
       title="Resident"
       role={backendUser?.role}
       userFirstName={backendUser?.first_name}
+      userEmail={backendUser?.email}
+      profileTo="/resident/profile"
       modules={modules}
       onLogout={handleLogout}
     >
