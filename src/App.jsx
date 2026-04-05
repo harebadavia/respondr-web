@@ -21,6 +21,7 @@ import OfficialAnnouncements from "./pages/OfficialAnnouncements";
 import OfficialSmsLogs from "./pages/OfficialSmsLogs";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
           <Route path="incidents/:id" element={<ResidentIncidentDetail />} />
           <Route path="alerts" element={<ResidentAlerts />} />
           <Route path="announcements" element={<ResidentAnnouncements />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
         <Route
@@ -77,6 +79,7 @@ function App() {
           <Route path="alerts" element={<OfficialAlerts />} />
           <Route path="sms-logs" element={<OfficialSmsLogs />} />
           <Route path="announcements" element={<OfficialAnnouncements />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
         <Route
@@ -90,6 +93,7 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

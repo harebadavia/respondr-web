@@ -35,6 +35,7 @@ export default function ResidentIncidentsList() {
   const [incidents, setIncidents] = useState([]);
   const [loadingIncidents, setLoadingIncidents] = useState(true);
   const [incidentsError, setIncidentsError] = useState("");
+  const [query, setQuery] = useState("");
 
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -59,7 +60,7 @@ export default function ResidentIncidentsList() {
   const [pendingAttachment, setPendingAttachment] = useState(null);
 
   const [selectedIncident, setSelectedIncident] = useState(null);
-  const [selectedIncidentImageUrl, setSelectedIncidentImageUrl] = useState("");
+  const [selectedIncidentImages, setSelectedIncidentImages] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
 
@@ -72,6 +73,19 @@ export default function ResidentIncidentsList() {
     () => selectedCategory?.subcategories?.find((item) => item.id === selectedSubcategoryId) || null,
     [selectedCategory, selectedSubcategoryId]
   );
+
+  const filteredIncidents = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return incidents;
+    return incidents.filter((incident) => {
+      const category = `${incident.parent_category_name || ""} ${incident.category_name || ""} ${incident.incident_type || ""}`.toLowerCase();
+      return (
+        incident.title?.toLowerCase().includes(q) ||
+        incident.description?.toLowerCase().includes(q) ||
+        category.includes(q)
+      );
+    });
+  }, [incidents, query]);
 
   const loadIncidents = async () => {
     setLoadingIncidents(true);
@@ -103,7 +117,6 @@ export default function ResidentIncidentsList() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-
     loadIncidents();
     loadCategories();
   }, [isAuthenticated]);
@@ -241,18 +254,33 @@ export default function ResidentIncidentsList() {
     setDetailLoading(true);
     setDetailError("");
     setSelectedIncident(null);
-    setSelectedIncidentImageUrl("");
+    setSelectedIncidentImages([]);
 
     try {
       const data = await apiAuthRequest(`/incidents/${incidentId}`);
-
       setSelectedIncident(data);
 
-      const firstAttachment = Array.isArray(data.attachments) ? data.attachments[0] : null;
-      if (firstAttachment?.storage_path) {
-        const url = await getDownloadURL(ref(storage, firstAttachment.storage_path));
-        setSelectedIncidentImageUrl(url);
-      }
+      const attachments = Array.isArray(data.attachments) ? data.attachments : [];
+      const imageAttachments = attachments.filter((item) => String(item?.mime_type || "").startsWith("image/"));
+      const resolvedImages = await Promise.all(
+        imageAttachments.map(async (item) => {
+          try {
+            let url = item.file_url || "";
+            if (!url && item.storage_path) {
+              url = await getDownloadURL(ref(storage, item.storage_path));
+            }
+            if (!url) return null;
+            return {
+              id: item.id,
+              url,
+              fileName: item.file_name || "Attachment",
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      setSelectedIncidentImages(resolvedImages.filter(Boolean));
     } catch (err) {
       setDetailError(err.message || "Failed to load report details");
     } finally {
@@ -263,15 +291,42 @@ export default function ResidentIncidentsList() {
   return (
     <>
       <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">Reports</h1>
-            <p className="text-sm text-neutral-600">Submit and track your incident reports.</p>
+        <div className="rounded-2xl bg-brand-800 px-5 py-5 text-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Reports</h1>
+              <span className="rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-xs font-bold">
+                {incidents.length}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => loadIncidents()}
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
+              >
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubmitModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand-800 transition hover:bg-neutral-100"
+              >
+                <FaPlus /> File a report
+              </button>
+            </div>
           </div>
+          <p className="mt-1 text-sm text-white/80">Submit and track your incident reports.</p>
+        </div>
 
-          <Button onClick={() => setSubmitModalOpen(true)} className="gap-2">
-            <FaPlus /> Submit Report
-          </Button>
+        <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 shadow-sm">
+          <span className="text-neutral-400">🔍</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search reports"
+            className="border-0 p-0 text-sm focus:ring-0"
+          />
         </div>
 
         {incidentsError && <Alert tone="error">{incidentsError}</Alert>}
@@ -279,10 +334,10 @@ export default function ResidentIncidentsList() {
 
         {loadingIncidents ? (
           <Card><p className="text-neutral-600">Loading reports...</p></Card>
-        ) : incidents.length === 0 ? (
+        ) : filteredIncidents.length === 0 ? (
           <Card><p className="text-neutral-600">No reports yet.</p></Card>
         ) : (
-          incidents.map((incident) => (
+          filteredIncidents.map((incident) => (
             <div
               key={incident.id}
               onClick={() => openDetailModal(incident.id)}
@@ -296,7 +351,7 @@ export default function ResidentIncidentsList() {
                 }
               }}
             >
-              <Card className="transition hover:border-brand-300 hover:bg-brand-50">
+              <Card className="transition hover:border-brand-300 hover:shadow-md">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-neutral-900">{incident.title}</h3>
@@ -426,63 +481,87 @@ export default function ResidentIncidentsList() {
         </div>
       </Modal>
 
-      <Modal open={detailModalOpen} onClose={() => setDetailModalOpen(false)} title="Report Details" className="max-w-2xl">
+      <Modal open={detailModalOpen} onClose={() => setDetailModalOpen(false)} title="Report Details" className="max-w-3xl">
         {detailLoading && <p className="text-neutral-600">Loading report details...</p>}
         {!detailLoading && detailError && <Alert tone="error">{detailError}</Alert>}
 
         {!detailLoading && !detailError && selectedIncident && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-xl font-semibold text-neutral-900">{selectedIncident.title}</h3>
-              <StatusChip status={selectedIncident.status} />
+          <div className="space-y-4">
+            <div className="rounded-xl bg-brand-800 px-5 py-5 text-white">
+              <div className="mb-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                {String(selectedIncident.status || "pending").replace(/_/g, " ")}
+              </div>
+              <h3 className="text-2xl font-bold">{selectedIncident.title}</h3>
+              <p className="mt-1 text-xs text-white/80">{new Date(selectedIncident.created_at).toLocaleString()}</p>
             </div>
 
-            <p className="text-neutral-700">{selectedIncident.description}</p>
+            <Card>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">Description</h4>
+              <p className="mt-2 text-neutral-700">{selectedIncident.description}</p>
+            </Card>
 
-            <div className="grid gap-1 text-sm text-neutral-600">
-              <p>
-                Category: {selectedIncident.parent_category_name || "N/A"}
-                {selectedIncident.category_name ? ` > ${selectedIncident.category_name}` : ""}
-              </p>
-              <p>Coordinates: {selectedIncident.latitude}, {selectedIncident.longitude}</p>
-              <p>Created: {new Date(selectedIncident.created_at).toLocaleString()}</p>
-              <p>ID: {selectedIncident.id}</p>
-            </div>
+            <Card>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">Incident Details</h4>
+              <div className="mt-2 grid gap-1 text-sm text-neutral-600">
+                <p>
+                  Category: {selectedIncident.parent_category_name || "N/A"}
+                  {selectedIncident.category_name ? ` > ${selectedIncident.category_name}` : ""}
+                </p>
+                <p>Coordinates: {selectedIncident.latitude}, {selectedIncident.longitude}</p>
+                <p>Created: {new Date(selectedIncident.created_at).toLocaleString()}</p>
+                <p>ID: {selectedIncident.id}</p>
+              </div>
+            </Card>
 
-            <div>
-              <h4 className="text-sm font-semibold text-neutral-900">Attachment</h4>
-              {selectedIncidentImageUrl ? (
-                <img
-                  src={selectedIncidentImageUrl}
-                  alt="Report attachment"
-                  className="mt-2 w-full max-w-lg rounded-lg border border-neutral-200"
-                />
+            <Card>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
+                Photo Gallery{selectedIncidentImages.length ? ` · ${selectedIncidentImages.length}` : ""}
+              </h4>
+              {selectedIncidentImages.length ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {selectedIncidentImages.map((image) => (
+                    <a key={image.id} href={image.url} target="_blank" rel="noreferrer" className="block">
+                      <img
+                        src={image.url}
+                        alt={image.fileName}
+                        className="h-40 w-full rounded-lg border border-neutral-200 object-cover"
+                      />
+                      <p className="mt-1 truncate text-xs text-neutral-600">{image.fileName}</p>
+                    </a>
+                  ))}
+                </div>
               ) : (
                 <p className="mt-2 text-sm text-neutral-600">No attachment</p>
               )}
-            </div>
+            </Card>
 
-            <section>
-              <h4 className="text-sm font-semibold text-neutral-900">Barangay Responses</h4>
+            <Card>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">Response Timeline</h4>
               {Array.isArray(selectedIncident.responses) && selectedIncident.responses.length > 0 ? (
-                <div className="mt-2 space-y-2">
-                  {selectedIncident.responses.map((response) => (
-                    <Card key={response.id} className="border-neutral-200 bg-neutral-50">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-neutral-900">
-                          {`${response.responded_by_first_name || ""} ${response.responded_by_last_name || ""}`.trim() ||
-                            "Barangay Official"}
-                        </p>
-                        <p className="text-xs text-neutral-600">{new Date(response.created_at).toLocaleString()}</p>
+                <div className="mt-3 space-y-3">
+                  {selectedIncident.responses.map((response, index) => (
+                    <div key={response.id} className="flex gap-3">
+                      <div className="flex w-5 flex-col items-center">
+                        <span className="mt-1 h-3 w-3 rounded-full bg-brand-600" />
+                        {index < selectedIncident.responses.length - 1 && <span className="mt-1 h-full w-px bg-neutral-300" />}
                       </div>
-                      <p className="mt-2 text-sm text-neutral-700">{response.message}</p>
-                    </Card>
+                      <div className="flex-1 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-neutral-900">
+                            {`${response.responded_by_first_name || ""} ${response.responded_by_last_name || ""}`.trim() ||
+                              "Barangay Official"}
+                          </p>
+                          <p className="text-xs text-neutral-600">{new Date(response.created_at).toLocaleString()}</p>
+                        </div>
+                        <p className="mt-2 text-sm text-neutral-700">{response.message}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-neutral-600">No barangay responses yet.</p>
               )}
-            </section>
+            </Card>
           </div>
         )}
       </Modal>

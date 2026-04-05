@@ -38,6 +38,8 @@ export default function OfficialLayout() {
       title="Official"
       role={backendUser?.role}
       userFirstName={backendUser?.first_name}
+      userEmail={backendUser?.email}
+      profileTo="/official/profile"
       modules={modules}
       onLogout={handleLogout}
     >
