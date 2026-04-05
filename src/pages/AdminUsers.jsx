@@ -4,6 +4,7 @@ import Card from "../components/ui/Card";
 import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
 import PageContainer from "../components/ui/PageContainer";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 const ROLE_OPTIONS = ["resident", "official", "admin"];
 
@@ -79,11 +80,12 @@ export default function AdminUsers() {
   };
 
   return (
-    <PageContainer className="space-y-4 px-0 py-0">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Admin Users</h1>
-        <p className="mt-1 text-sm text-neutral-600">Manage user role and account activation status.</p>
-      </div>
+    <PageContainer className="space-y-4 !max-w-none px-0 py-0">
+      <RolePageHeader
+        role="admin"
+        title="Admin Users"
+        subtitle="Manage user role and account activation status."
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
       {message && <Alert tone="success">{message}</Alert>}

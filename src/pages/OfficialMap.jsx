@@ -5,6 +5,7 @@ import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 const MAP_CENTER = [14.425819, 120.886698];
 const MAP_ZOOM = 16;
@@ -109,13 +110,12 @@ export default function OfficialMap() {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Operations Map</h1>
-          <p className="text-sm text-neutral-600">Incident and barangay location visualization (OpenStreetMap).</p>
-        </div>
-        <Button variant="secondary" onClick={loadData}>Refresh Data</Button>
-      </div>
+      <RolePageHeader
+        role="official"
+        title="Operations Map"
+        subtitle="Incident and barangay location visualization (OpenStreetMap)."
+        right={<Button variant="secondary" onClick={loadData}>Refresh Data</Button>}
+      />
 
       <Card>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">

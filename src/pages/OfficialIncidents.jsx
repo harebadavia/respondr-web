@@ -10,6 +10,7 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Textarea from "../components/ui/Textarea";
 import Modal from "../components/ui/Modal";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 const statusOptions = ["all", "pending", "verified", "in_progress", "resolved", "rejected"];
 
@@ -245,12 +246,11 @@ export default function OfficialIncidents() {
   return (
     <>
       <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">Incident Queue</h1>
-            <p className="text-sm text-neutral-600">Review reports, update statuses, and post barangay responses.</p>
-          </div>
-        </div>
+        <RolePageHeader
+          role="official"
+          title="Incident Queue"
+          subtitle="Review reports, update statuses, and post barangay responses."
+        />
 
         <Card>
           <div className="grid gap-3 md:grid-cols-[220px,1fr]">

@@ -6,6 +6,7 @@ import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Textarea from "../components/ui/Textarea";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 const INITIAL_FORM = {
   title: "",
@@ -93,10 +94,11 @@ export default function OfficialAlerts() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Alerts</h1>
-        <p className="text-sm text-neutral-600">Create and broadcast barangay alerts.</p>
-      </div>
+      <RolePageHeader
+        role="official"
+        title="Alerts"
+        subtitle="Create and broadcast barangay alerts."
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
       {message && <Alert tone="success">{message}</Alert>}

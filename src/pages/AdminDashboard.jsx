@@ -1,12 +1,17 @@
 import Card from "../components/ui/Card";
 import PageContainer from "../components/ui/PageContainer";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 export default function AdminDashboard() {
   return (
-    <PageContainer className="px-0 py-0">
+    <PageContainer className="space-y-4 !max-w-none px-0 py-0">
+      <RolePageHeader
+        role="admin"
+        title="Admin Dashboard"
+        subtitle="System management and oversight workspace."
+      />
       <Card>
-        <h1 className="text-2xl font-bold text-neutral-900">Admin Dashboard</h1>
-        <p className="mt-2 text-neutral-600">Placeholder for system management overview.</p>
+        <p className="text-neutral-600">Admin analytics and system controls will appear here.</p>
       </Card>
     </PageContainer>
   );
