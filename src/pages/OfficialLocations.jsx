@@ -7,6 +7,7 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Textarea from "../components/ui/Textarea";
 import Modal from "../components/ui/Modal";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 const INITIAL_FORM = {
   name: "",
@@ -152,13 +153,12 @@ export default function OfficialLocations() {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Locations</h1>
-          <p className="text-sm text-neutral-600">Manage barangay landmarks and evacuation points.</p>
-        </div>
-        <Button onClick={openCreate}>Add Location</Button>
-      </div>
+      <RolePageHeader
+        role="official"
+        title="Locations"
+        subtitle="Manage barangay landmarks and evacuation points."
+        right={<Button onClick={openCreate}>Add Location</Button>}
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
       {message && <Alert tone="success">{message}</Alert>}

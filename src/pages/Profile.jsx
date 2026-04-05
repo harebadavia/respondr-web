@@ -1,5 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import Card from "../components/ui/Card";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 export default function Profile() {
   const { backendUser } = useAuth();
@@ -10,10 +11,11 @@ export default function Profile() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl bg-brand-800 px-5 py-5 text-white shadow-sm">
-        <h1 className="text-2xl font-bold">Profile</h1>
-        <p className="mt-1 text-sm text-white/80">Account details and role information.</p>
-      </div>
+      <RolePageHeader
+        role={backendUser?.role || "resident"}
+        title="Profile"
+        subtitle="Account details and role information."
+      />
 
       <Card className="max-w-2xl">
         <div className="flex items-center gap-4">

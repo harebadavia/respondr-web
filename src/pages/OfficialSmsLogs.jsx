@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import Alert from "../components/ui/Alert";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 const LIMIT_OPTIONS = [25, 50, 100, 200];
 
@@ -47,10 +48,11 @@ export default function OfficialSmsLogs() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">SMS Logs</h1>
-        <p className="text-sm text-neutral-600">Operational SMS audit view for alerts.</p>
-      </div>
+      <RolePageHeader
+        role="official"
+        title="SMS Logs"
+        subtitle="Operational SMS audit view for alerts."
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
 

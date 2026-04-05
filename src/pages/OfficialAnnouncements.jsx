@@ -6,6 +6,7 @@ import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Textarea from "../components/ui/Textarea";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 export default function OfficialAnnouncements() {
   const { isAuthenticated } = useAuth();
@@ -65,10 +66,11 @@ export default function OfficialAnnouncements() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Announcements</h1>
-        <p className="text-sm text-neutral-600">Post barangay-wide announcements.</p>
-      </div>
+      <RolePageHeader
+        role="official"
+        title="Announcements"
+        subtitle="Post barangay-wide announcements."
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
       {message && <Alert tone="success">{message}</Alert>}

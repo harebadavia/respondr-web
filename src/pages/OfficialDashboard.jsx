@@ -1,12 +1,17 @@
 import Card from "../components/ui/Card";
 import PageContainer from "../components/ui/PageContainer";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 export default function OfficialDashboard() {
   return (
-    <PageContainer className="px-0 py-0">
+    <PageContainer className="space-y-4 !max-w-none px-0 py-0">
+      <RolePageHeader
+        role="official"
+        title="Official Dashboard"
+        subtitle="Overview placeholder for barangay incident operations."
+      />
       <Card>
-        <h1 className="text-2xl font-bold text-neutral-900">Official Dashboard</h1>
-        <p className="mt-2 text-neutral-600">Overview placeholder for barangay incident operations.</p>
+        <p className="text-neutral-600">Operational dashboard widgets will appear here.</p>
       </Card>
     </PageContainer>
   );
