@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../../../respondr-backend"
+		},
+		{
+			"path": "../../../respondr-mobile"
+		},
+		{
+			"path": "../.."
+		}
+	]
+}

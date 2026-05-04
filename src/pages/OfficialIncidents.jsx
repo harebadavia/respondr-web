@@ -253,7 +253,7 @@ export default function OfficialIncidents() {
         />
 
         <Card>
-          <div className="grid gap-3 md:grid-cols-[220px,1fr]">
+          <div className="grid gap-3 md:grid-cols-[220px,1fr,auto] md:items-end">
             <div>
               <label className="text-sm font-medium text-neutral-800">Status</label>
               <select
@@ -275,6 +275,17 @@ export default function OfficialIncidents() {
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
+
+            <div className="md:justify-self-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={loadIncidents}
+                disabled={loadingIncidents}
+              >
+                {loadingIncidents ? "Refreshing..." : "Refresh"}
+              </Button>
+            </div>
           </div>
         </Card>
 
