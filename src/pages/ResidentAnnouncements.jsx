@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext";
 import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import Alert from "../components/ui/Alert";
+import RolePageHeader from "../components/ui/RolePageHeader";
+import Button from "../components/ui/Button";
 
 export default function ResidentAnnouncements() {
   const { isAuthenticated } = useAuth();
@@ -42,28 +44,22 @@ export default function ResidentAnnouncements() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl bg-brand-800 px-5 py-5 text-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <RolePageHeader
+        role="resident"
+        title="Announcements"
+        subtitle="Latest barangay announcements."
+        right={(
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Announcements</h1>
-            <span className="rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-xs font-bold">
-              {announcements.length}
-            </span>
+            <span className="rounded-full bg-[#EAF3DE] px-2.5 py-1 text-xs font-bold text-[#3B6D11]">{announcements.length}</span>
+            <Button type="button" variant="secondary" onClick={() => loadAnnouncements("refresh")} disabled={refreshing}>
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Button>
           </div>
-          <button
-            type="button"
-            onClick={() => loadAnnouncements("refresh")}
-            disabled={refreshing}
-            className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/25 disabled:opacity-70"
-          >
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </button>
-        </div>
-        <p className="mt-1 text-sm text-white/80">Latest barangay announcements.</p>
-      </div>
+        )}
+      />
 
-      <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 shadow-sm">
-        <span className="text-neutral-400">🔍</span>
+      <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-tertiary)] bg-white px-4 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
+        <span className="text-[var(--color-text-tertiary)]">🔍</span>
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}

@@ -34,10 +34,10 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900">
+    <div className="min-h-screen bg-[var(--color-background-tertiary)] text-neutral-900">
       <div className="flex min-h-screen">
         <aside
-          className={`hidden border-r border-neutral-200 bg-white transition-[width] duration-200 md:sticky md:top-0 md:block md:h-screen md:self-start ${desktopSidebarWidth}`}
+          className={`hidden border-r border-[var(--color-border-tertiary)] bg-white transition-[width] duration-200 md:sticky md:top-0 md:block md:h-screen md:self-start ${desktopSidebarWidth}`}
         >
           <SideNav
             collapsed={collapsed}
@@ -55,7 +55,7 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
         {mobileOpen && (
           <div className="fixed inset-0 z-40 bg-neutral-900/40 md:hidden" onClick={() => setMobileOpen(false)}>
             <aside
-              className="h-full w-[280px] border-r border-neutral-200 bg-white"
+              className="h-full w-[280px] border-r border-[var(--color-border-tertiary)] bg-white"
               onClick={(event) => event.stopPropagation()}
             >
               <SideNav

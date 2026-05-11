@@ -30,9 +30,9 @@ export default function Modal({ open, title, onClose, children, className }) {
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-[1px]" onClick={onClose}>
       <div
-        className={cx("max-h-[92vh] w-full max-w-3xl overflow-auto rounded-lg bg-white p-4 shadow-lg md:p-5", className)}
+        className={cx("max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl border border-[var(--color-border-tertiary)] bg-white p-4 shadow-[0_12px_34px_rgba(15,23,42,0.18)] md:p-5", className)}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between gap-3">

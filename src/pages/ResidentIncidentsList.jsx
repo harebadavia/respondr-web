@@ -291,11 +291,11 @@ export default function ResidentIncidentsList() {
   return (
     <>
       <section className="space-y-4">
-        <div className="rounded-2xl bg-brand-800 px-5 py-5 text-white shadow-sm">
+        <div className="rounded-2xl border border-[var(--color-border-tertiary)] bg-white px-5 py-5 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">Reports</h1>
-              <span className="rounded-full border border-white/25 bg-white/15 px-2 py-0.5 text-xs font-bold">
+              <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-xs font-bold text-[#3B6D11]">
                 {incidents.length}
               </span>
             </div>
@@ -303,24 +303,24 @@ export default function ResidentIncidentsList() {
               <button
                 type="button"
                 onClick={() => loadIncidents()}
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
+                className="rounded-full border border-[var(--color-border-secondary)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-background-secondary)]"
               >
                 Refresh
               </button>
               <button
                 type="button"
                 onClick={() => setSubmitModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand-800 transition hover:bg-neutral-100"
+                className="inline-flex items-center gap-2 rounded-full bg-[#185FA5] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0C447C]"
               >
                 <FaPlus /> File a report
               </button>
             </div>
           </div>
-          <p className="mt-1 text-sm text-white/80">Submit and track your incident reports.</p>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Submit and track your incident reports.</p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 shadow-sm">
-          <span className="text-neutral-400">🔍</span>
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-tertiary)] bg-white px-4 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
+          <span className="text-[var(--color-text-tertiary)]">🔍</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -351,7 +351,7 @@ export default function ResidentIncidentsList() {
                 }
               }}
             >
-              <Card className="transition hover:border-brand-300 hover:shadow-md">
+              <Card className="transition hover:border-[#B5D4F4] hover:shadow-md">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-neutral-900">{incident.title}</h3>
@@ -409,7 +409,7 @@ export default function ResidentIncidentsList() {
                         setSelectedCategoryId(category.id);
                         setSelectedSubcategoryId("");
                       }}
-                      className={`rounded-md border p-3 text-left transition ${selected ? "border-brand-400 bg-brand-50" : "border-neutral-200 hover:border-brand-200"}`}
+                      className={`rounded-md border p-3 text-left transition ${selected ? "border-[#378ADD] bg-[#E6F1FB]" : "border-neutral-200 hover:border-[#B5D4F4]"}`}
                     >
                       <Icon className="mb-2 text-lg text-brand-700" />
                       <p className="text-sm font-medium text-neutral-900">{category.name}</p>
@@ -430,7 +430,7 @@ export default function ResidentIncidentsList() {
                     key={subcategory.id}
                     type="button"
                     onClick={() => setSelectedSubcategoryId(subcategory.id)}
-                    className={`rounded-md border px-3 py-2 text-sm text-left transition ${selected ? "border-brand-400 bg-brand-50 text-brand-800" : "border-neutral-200 text-neutral-700 hover:border-brand-200"}`}
+                    className={`rounded-md border px-3 py-2 text-sm text-left transition ${selected ? "border-[#378ADD] bg-[#E6F1FB] text-[#185FA5]" : "border-neutral-200 text-neutral-700 hover:border-[#B5D4F4]"}`}
                   >
                     {subcategory.name}
                   </button>
@@ -487,12 +487,12 @@ export default function ResidentIncidentsList() {
 
         {!detailLoading && !detailError && selectedIncident && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-brand-800 px-5 py-5 text-white">
-              <div className="mb-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+            <div className="rounded-xl border border-[var(--color-border-tertiary)] bg-white px-5 py-5 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
+              <div className="mb-3 inline-flex items-center rounded-full bg-[#E6F1FB] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#185FA5]">
                 {String(selectedIncident.status || "pending").replace(/_/g, " ")}
               </div>
-              <h3 className="text-2xl font-bold">{selectedIncident.title}</h3>
-              <p className="mt-1 text-xs text-white/80">{new Date(selectedIncident.created_at).toLocaleString()}</p>
+              <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">{selectedIncident.title}</h3>
+              <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">{new Date(selectedIncident.created_at).toLocaleString()}</p>
             </div>
 
             <Card>
@@ -542,7 +542,7 @@ export default function ResidentIncidentsList() {
                   {selectedIncident.responses.map((response, index) => (
                     <div key={response.id} className="flex gap-3">
                       <div className="flex w-5 flex-col items-center">
-                        <span className="mt-1 h-3 w-3 rounded-full bg-brand-600" />
+                        <span className="mt-1 h-3 w-3 rounded-full bg-[#378ADD]" />
                         {index < selectedIncident.responses.length - 1 && <span className="mt-1 h-full w-px bg-neutral-300" />}
                       </div>
                       <div className="flex-1 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
