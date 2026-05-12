@@ -1,6 +1,7 @@
 import { useAuth } from "../context/AuthContext";
 import Card from "../components/ui/Card";
 import RolePageHeader from "../components/ui/RolePageHeader";
+import { FaUser } from "react-icons/fa6";
 
 export default function Profile() {
   const { backendUser } = useAuth();
@@ -15,6 +16,7 @@ export default function Profile() {
         role={backendUser?.role || "resident"}
         title="Profile"
         subtitle="Account details and role information."
+        icon={FaUser}
       />
 
       <Card className="max-w-2xl">

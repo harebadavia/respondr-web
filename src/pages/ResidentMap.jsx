@@ -7,26 +7,27 @@ import { apiAuthRequest } from "../services/api";
 
 const MAP_CENTER = [14.425819, 120.886698];
 const MAP_ZOOM = 16;
-
 const STATUS_OPTIONS = ["all", "pending", "verified", "in_progress", "resolved", "rejected"];
 
 const STATUS_MAP = {
-  pending:     { dot: "#EF9F27", fill: "#FAEEDA", text: "#854F0B", leaflet: "#d97706" },
-  verified:    { dot: "#378ADD", fill: "#E6F1FB", text: "#185FA5", leaflet: "#0284c7" },
+  pending: { dot: "#EF9F27", fill: "#FAEEDA", text: "#854F0B", leaflet: "#d97706" },
+  verified: { dot: "#378ADD", fill: "#E6F1FB", text: "#185FA5", leaflet: "#0284c7" },
   in_progress: { dot: "#7F77DD", fill: "#EEEDFE", text: "#534AB7", leaflet: "#7c3aed" },
-  resolved:    { dot: "#639922", fill: "#EAF3DE", text: "#3B6D11", leaflet: "#059669" },
-  rejected:    { dot: "#E24B4A", fill: "#FCEBEB", text: "#A32D2D", leaflet: "#dc2626" },
+  resolved: { dot: "#639922", fill: "#EAF3DE", text: "#3B6D11", leaflet: "#059669" },
+  rejected: { dot: "#E24B4A", fill: "#FCEBEB", text: "#A32D2D", leaflet: "#dc2626" },
 };
 
-/* ─── Helpers ────────────────────────────────────────────────── */
+const PANEL_STYLE = {
+  background: "#ffffff",
+  border: "0.5px solid #DDE4EE",
+  boxShadow: "0 8px 24px rgba(15,23,42,0.12), 0 2px 6px rgba(15,23,42,0.06)",
+  borderRadius: 14,
+  backdropFilter: "blur(8px)",
+};
+
 function toNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function categoryText(incident) {
-  const parent = incident.parent_category_name || "Uncategorized";
-  return incident.category_name ? `${parent} › ${incident.category_name}` : parent;
 }
 
 function normalizeSearch(value) {
@@ -49,73 +50,85 @@ function MapFocus({ target }) {
   return null;
 }
 
-/* ─── Floating panel shell ───────────────────────────────────── */
-const PANEL_STYLE = {
-  background: "#ffffff",
-  border: "0.5px solid #DDE4EE",
-  boxShadow: "0 8px 24px rgba(15,23,42,0.12), 0 2px 6px rgba(15,23,42,0.06)",
-  borderRadius: 14,
-  backdropFilter: "blur(8px)",
-};
+function isOwnedIncident(incident, backendUser) {
+  if (!incident || !backendUser) return false;
+  const ownerKeys = ["reported_by", "reported_by_id", "user_id", "created_by"];
+  for (const key of ownerKeys) {
+    if (incident[key] == null) continue;
+    if (String(incident[key]) === String(backendUser.id)) return true;
+  }
+  return false;
+}
 
-/* ─── Small toggle button ────────────────────────────────────── */
 function LayerToggle({ active, children, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        padding: "5px 12px", borderRadius: 8,
-        fontSize: 12, fontWeight: 600,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "5px 12px",
+        borderRadius: 8,
+        fontSize: 12,
+        fontWeight: 600,
         cursor: "pointer",
         border: active ? "none" : "0.5px solid #DDE4EE",
         background: active ? "#185FA5" : "#ffffff",
         color: active ? "#ffffff" : "#64748b",
         transition: "all 0.12s",
-        letterSpacing: "0.01em",
       }}
     >
-      <span style={{
-        width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
-        background: active ? "#93c5fd" : "#cbd5e1",
-      }} />
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: active ? "#93c5fd" : "#cbd5e1",
+        }}
+      />
       {children}
     </button>
   );
 }
 
-/* ─── Select with chevron ────────────────────────────────────── */
-function FloatSelect({ value, onChange, disabled, children }) {
+function FloatSelect({ value, onChange, children }) {
   return (
     <div style={{ position: "relative" }}>
       <select
         value={value}
         onChange={onChange}
-        disabled={disabled}
         style={{
           width: "100%",
           padding: "7px 30px 7px 10px",
-          fontSize: 12, color: disabled ? "#94a3b8" : "#0f172a",
-          background: disabled ? "#f8fafc" : "#ffffff",
+          fontSize: 12,
+          color: "#0f172a",
+          background: "#ffffff",
           border: "0.5px solid #DDE4EE",
-          borderRadius: 8, appearance: "none",
-          cursor: disabled ? "not-allowed" : "pointer",
+          borderRadius: 8,
+          appearance: "none",
+          cursor: "pointer",
           outline: "none",
           fontFamily: "inherit",
         }}
       >
         {children}
       </select>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-        style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8" }}>
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8" }}
+      >
         <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </div>
   );
 }
 
-/* ─── Status badge (legend) ──────────────────────────────────── */
 function LegendItem({ status }) {
   const s = STATUS_MAP[status] || { dot: "#94a3b8", text: "#64748b" };
   return (
@@ -133,16 +146,18 @@ function SearchPanel({ searchTerm, setSearchTerm, incidentResults, locationResul
   const hasResults = incidentResults.length > 0 || locationResults.length > 0;
 
   return (
-    <div style={{
-      position: "relative",
-      width: 340,
-      height: 57,
-      boxSizing: "border-box",
-      ...PANEL_STYLE,
-      padding: 10,
-      display: "flex",
-      alignItems: "center",
-    }}>
+    <div
+      style={{
+        position: "relative",
+        width: 340,
+        height: 57,
+        boxSizing: "border-box",
+        ...PANEL_STYLE,
+        padding: 10,
+        display: "flex",
+        alignItems: "center",
+      }}
+    >
       <div style={{ position: "relative", width: "100%" }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }}>
           <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
@@ -176,13 +191,13 @@ function SearchPanel({ searchTerm, setSearchTerm, incidentResults, locationResul
             <>
               {incidentResults.length > 0 && (
                 <div>
-                  <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.07em", textTransform: "uppercase" }}>Incidents</p>
+                  <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.07em", textTransform: "uppercase" }}>My Incidents</p>
                   {incidentResults.slice(0, 6).map((incident) => (
                     <button key={`incident-result-${incident.id}`} type="button" onClick={() => onSelectResult("incident", incident)} style={{ width: "100%", border: "none", background: "transparent", padding: "7px 2px", display: "flex", alignItems: "flex-start", gap: 8, textAlign: "left", cursor: "pointer", borderRadius: 7 }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", marginTop: 5, background: (STATUS_MAP[incident.status] || {}).dot || "#378ADD", flexShrink: 0 }} />
                       <span style={{ minWidth: 0 }}>
                         <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{incident.title || "Untitled incident"}</span>
-                        <span style={{ display: "block", fontSize: 11, color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{categoryText(incident)} · {String(incident.status || "unknown").replace("_", " ")}</span>
+                        <span style={{ display: "block", fontSize: 11, color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{String(incident.status || "unknown").replace("_", " ")} · {incident.description || `${incident.latitude}, ${incident.longitude}`}</span>
                       </span>
                       <span
                         role="button"
@@ -198,7 +213,7 @@ function SearchPanel({ searchTerm, setSearchTerm, incidentResults, locationResul
                             onOpenIncident(incident.id);
                           }
                         }}
-                        style={{ marginLeft: "auto", flexShrink: 0, padding: "3px 7px", borderRadius: 7, background: "#E6F1FB", color: "#185FA5", fontSize: 10, fontWeight: 700 }}
+                        style={{ marginLeft: "auto", flexShrink: 0, padding: "3px 7px", borderRadius: 7, background: "#EAF3DE", color: "#3B6D11", fontSize: 10, fontWeight: 700 }}
                       >
                         Details
                       </span>
@@ -229,41 +244,49 @@ function SearchPanel({ searchTerm, setSearchTerm, incidentResults, locationResul
   );
 }
 
-/* ─── Main ───────────────────────────────────────────────────── */
-export default function OfficialMap() {
-  const { isAuthenticated } = useAuth();
+export default function ResidentMap() {
+  const { isAuthenticated, backendUser } = useAuth();
   const navigate = useNavigate();
   const markerRefs = useRef({});
 
   const [incidents, setIncidents] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [statusFilter, setStatusFilter] = useState("all");
-  const [parentCategoryFilter, setParentCategoryFilter] = useState("all");
-  const [subcategoryFilter, setSubcategoryFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [focusTarget, setFocusTarget] = useState(null);
   const [showIncidents, setShowIncidents] = useState(true);
   const [showLocations, setShowLocations] = useState(true);
-
-  /* Collapse filter panel on mobile */
   const [filtersOpen, setFiltersOpen] = useState(true);
 
   const loadData = async () => {
     setLoading(true);
     setError("");
     try {
-      const [incidentsData, locationsData, categoriesData] = await Promise.all([
-        apiAuthRequest("/incidents"),
-        apiAuthRequest("/locations?include_inactive=true"),
-        apiAuthRequest("/incident-categories"),
+      const [incidentsRes, locationsRes, dashboardRes] = await Promise.allSettled([
+        apiAuthRequest("/incidents/my"),
+        apiAuthRequest("/locations"),
+        apiAuthRequest("/dashboard"),
       ]);
+
+      const incidentsData = incidentsRes.status === "fulfilled" ? incidentsRes.value : [];
+      const directLocationsData = locationsRes.status === "fulfilled" ? locationsRes.value : [];
+      const dashboardData = dashboardRes.status === "fulfilled" ? dashboardRes.value : null;
+      const dashboardLocationsData = Array.isArray(dashboardData?.sections?.key_locations)
+        ? dashboardData.sections.key_locations
+        : [];
+
       setIncidents(Array.isArray(incidentsData) ? incidentsData : []);
-      setLocations(Array.isArray(locationsData) ? locationsData : []);
-      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setLocations(
+        Array.isArray(directLocationsData) && directLocationsData.length > 0
+          ? directLocationsData
+          : dashboardLocationsData
+      );
+
+      if (incidentsRes.status === "rejected" && locationsRes.status === "rejected" && dashboardRes.status === "rejected") {
+        throw new Error("Failed to load map data");
+      }
     } catch (err) {
       setError(err.message || "Failed to load map data");
     } finally {
@@ -276,15 +299,19 @@ export default function OfficialMap() {
     loadData();
   }, [isAuthenticated]);
 
-  const selectedParent = categories.find(cat => cat.id === parentCategoryFilter);
+  const myIncidents = useMemo(() => {
+    const withCoords = incidents.filter((incident) => {
+      return toNumber(incident.latitude) !== null && toNumber(incident.longitude) !== null;
+    });
+    const owned = withCoords.filter((incident) => isOwnedIncident(incident, backendUser));
+    return owned.length > 0 ? owned : withCoords;
+  }, [incidents, backendUser]);
 
-  const filteredIncidents = useMemo(() => {
+  const filteredMyIncidents = useMemo(() => {
     const query = normalizeSearch(searchTerm);
-    return incidents.filter(incident => {
+    return myIncidents.filter((incident) => {
       if (statusFilter !== "all" && incident.status !== statusFilter) return false;
-      if (parentCategoryFilter !== "all" && incident.parent_category_name !== selectedParent?.name) return false;
-      if (subcategoryFilter !== "all" && incident.category_id !== subcategoryFilter) return false;
-      if (!matchesSearch(query, [
+      return matchesSearch(query, [
         incident.title,
         incident.description,
         incident.status,
@@ -292,15 +319,14 @@ export default function OfficialMap() {
         incident.category_name,
         incident.latitude,
         incident.longitude,
-      ])) return false;
-      return toNumber(incident.latitude) !== null && toNumber(incident.longitude) !== null;
+      ]);
     });
-  }, [incidents, searchTerm, statusFilter, parentCategoryFilter, subcategoryFilter, selectedParent]);
+  }, [myIncidents, searchTerm, statusFilter]);
 
-  const filteredLocations = useMemo(() => {
+  const mapLocations = useMemo(() => {
     const query = normalizeSearch(searchTerm);
-    return locations.filter(loc => {
-      if (!matchesSearch(query, [loc.name, loc.description, loc.latitude, loc.longitude, loc.is_active ? "active" : "inactive"])) return false;
+    return locations.filter((loc) => {
+      if (!matchesSearch(query, [loc.name, loc.description, loc.latitude, loc.longitude])) return false;
       return toNumber(loc.latitude) !== null && toNumber(loc.longitude) !== null;
     });
   }, [locations, searchTerm]);
@@ -323,19 +349,7 @@ export default function OfficialMap() {
     return () => window.clearTimeout(timer);
   }, [focusTarget]);
 
-  const resetFilters = () => {
-    setStatusFilter("all");
-    setParentCategoryFilter("all");
-    setSubcategoryFilter("all");
-    setSearchTerm("");
-    setShowIncidents(true);
-    setShowLocations(true);
-  };
-
-  const isFiltered = statusFilter !== "all" || parentCategoryFilter !== "all" || subcategoryFilter !== "all" || searchTerm.trim().length > 0;
-
   return (
-    /* In-flow container so the main app layout (including side nav) remains visible */
     <div
       className="-mx-4 -my-4 md:-mx-6 md:-my-5"
       style={{
@@ -346,8 +360,6 @@ export default function OfficialMap() {
         zIndex: 0,
       }}
     >
-
-      {/* ── Full-page map ── */}
       <MapContainer
         center={MAP_CENTER}
         zoom={MAP_ZOOM}
@@ -361,7 +373,7 @@ export default function OfficialMap() {
         />
         <MapFocus target={focusTarget} />
 
-        {showIncidents && filteredIncidents.map(incident => {
+        {showIncidents && filteredMyIncidents.map((incident) => {
           const lat = toNumber(incident.latitude);
           const lng = toNumber(incident.longitude);
           if (lat === null || lng === null) return null;
@@ -383,25 +395,22 @@ export default function OfficialMap() {
                   </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     <span style={{ fontSize: 11, color: "#64748b" }}>
-                      Status: <strong style={{ color: "#0f172a" }}>{incident.status.replace("_", " ")}</strong>
+                      Status: <strong style={{ color: "#0f172a" }}>{String(incident.status || "unknown").replace("_", " ")}</strong>
                     </span>
                     <span style={{ fontSize: 11, color: "#64748b" }}>
-                      Category: <strong style={{ color: "#0f172a" }}>{categoryText(incident)}</strong>
-                    </span>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>
-                      {new Date(incident.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(incident.created_at).toLocaleString()}
                     </span>
                     <button
                       type="button"
-                      onClick={() => navigate(`/official/incidents?incident=${incident.id}`)}
+                      onClick={() => navigate(`/resident/incidents/${incident.id}`)}
                       style={{
                         marginTop: 5,
                         alignSelf: "flex-start",
                         padding: "5px 8px",
                         borderRadius: 7,
-                        border: "0.5px solid #B5D4F4",
-                        background: "#E6F1FB",
-                        color: "#185FA5",
+                        border: "0.5px solid #C0DD97",
+                        background: "#EAF3DE",
+                        color: "#3B6D11",
                         fontSize: 11,
                         fontWeight: 700,
                         cursor: "pointer",
@@ -416,7 +425,7 @@ export default function OfficialMap() {
           );
         })}
 
-        {showLocations && filteredLocations.map(location => {
+        {showLocations && mapLocations.map((location) => {
           const lat = toNumber(location.latitude);
           const lng = toNumber(location.longitude);
           if (lat === null || lng === null) return null;
@@ -435,16 +444,7 @@ export default function OfficialMap() {
                   <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
                     {location.name}
                   </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>{location.description || "No description"}</span>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>{lat}, {lng}</span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 600,
-                      color: location.is_active ? "#3B6D11" : "#64748b",
-                    }}>
-                      {location.is_active ? "● Active" : "○ Inactive"}
-                    </span>
-                  </div>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>{location.description || "No description"}</span>
                 </div>
               </Popup>
             </CircleMarker>
@@ -452,75 +452,103 @@ export default function OfficialMap() {
         })}
       </MapContainer>
 
-      {/* ── TOP-LEFT: Header + search ── */}
-      <div style={{
-        position: "absolute", top: 16, left: 16, zIndex: 800,
-        display: "flex", alignItems: "flex-start", gap: 8,
-      }}>
-        <div style={{
-        ...PANEL_STYLE,
-        padding: "10px 16px",
-        display: "flex", alignItems: "center", gap: 12,
-      }}>
-        {/* Clipboard-map icon */}
-        <div style={{
-          width: 34, height: 34, borderRadius: 9,
-          background: "#E6F1FB",
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
-          <FaMapLocationDot style={{ fontSize: 18, color: "#185FA5" }} />
+      <div
+        style={{
+          position: "absolute",
+          top: 16,
+          left: 16,
+          zIndex: 800,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+        }}
+      >
+      <div
+        style={{
+          ...PANEL_STYLE,
+          padding: "10px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 9,
+            background: "#EAF3DE",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <FaMapLocationDot style={{ fontSize: 18, color: "#3B6D11" }} />
         </div>
         <div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
-            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#0f172a", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
-              Incident Map
+            <h1 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#0f172a", lineHeight: 1.2 }}>
+              Map
             </h1>
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase",
-              background: "#E6F1FB", color: "#185FA5", padding: "1px 7px", borderRadius: 999,
-            }}>
-              Official
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.07em",
+                textTransform: "uppercase",
+                background: "#EAF3DE",
+                color: "#3B6D11",
+                padding: "1px 7px",
+                borderRadius: 999,
+              }}
+            >
+              Resident
             </span>
           </div>
           <p style={{ margin: "2px 0 0", fontSize: 11, color: "#64748b" }}>
-            OpenStreetMap · live data
+            Locations and reports you submitted
           </p>
         </div>
       </div>
         <SearchPanel
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
-          incidentResults={filteredIncidents}
-          locationResults={filteredLocations}
+          incidentResults={filteredMyIncidents}
+          locationResults={mapLocations}
           onSelectResult={selectSearchResult}
-          onOpenIncident={(incidentId) => navigate(`/official/incidents?incident=${incidentId}`)}
+          onOpenIncident={(incidentId) => navigate(`/resident/incidents/${incidentId}`)}
         />
       </div>
 
-      {/* ── TOP-RIGHT: Refresh + count pills ── */}
-      <div style={{
-        position: "absolute", top: 16, right: 16, zIndex: 800,
-        display: "flex", alignItems: "center", gap: 8,
-      }}>
-        {/* Counts */}
+      <div
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          zIndex: 800,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
         {!loading && (
           <>
             <div style={{ ...PANEL_STYLE, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#378ADD" }} />
               <span style={{ fontSize: 12, color: "#0f172a", fontWeight: 500 }}>
-                {showIncidents ? filteredIncidents.length : 0} incidents
+                {showIncidents ? filteredMyIncidents.length : 0} incidents
               </span>
             </div>
             <div style={{ ...PANEL_STYLE, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#14b8a6" }} />
               <span style={{ fontSize: 12, color: "#0f172a", fontWeight: 500 }}>
-                {showLocations ? filteredLocations.length : 0} locations
+                {showLocations ? mapLocations.length : 0} locations
               </span>
             </div>
           </>
         )}
 
-        {/* Refresh button */}
         <button
           type="button"
           onClick={loadData}
@@ -528,184 +556,126 @@ export default function OfficialMap() {
           title="Refresh data"
           style={{
             ...PANEL_STYLE,
-            width: 36, height: 36, padding: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
+            width: 36,
+            height: 36,
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             cursor: loading ? "not-allowed" : "pointer",
             border: "0.5px solid #DDE4EE",
             borderRadius: 10,
             background: "#ffffff",
             opacity: loading ? 0.6 : 1,
-            transition: "opacity 0.12s",
           }}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-            style={loading ? { animation: "spin 0.8s linear infinite" } : {}}>
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-            <path d="M4 12a8 8 0 1 1 1.5 4.7" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
-            <path d="M4 17v-5h5" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          ↻
         </button>
       </div>
 
-      {/* ── BOTTOM-LEFT: Filter panel ── */}
-      <div style={{
-        position: "absolute", bottom: 24, left: 16, zIndex: 800,
-        width: 260,
-        ...PANEL_STYLE,
-        padding: 0,
-        overflow: "hidden",
-      }}>
-        {/* Panel header / collapse toggle */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 24,
+          left: 16,
+          zIndex: 800,
+          width: 260,
+          ...PANEL_STYLE,
+          padding: 0,
+          overflow: "hidden",
+        }}
+      >
         <button
           type="button"
-          onClick={() => setFiltersOpen(prev => !prev)}
+          onClick={() => setFiltersOpen((prev) => !prev)}
           style={{
-            width: "100%", padding: "11px 14px",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: "transparent", border: "none", cursor: "pointer",
+            width: "100%",
+            padding: "11px 14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
             borderBottom: filtersOpen ? "0.5px solid #DDE4EE" : "none",
           }}
         >
           <span style={{ fontSize: 11, fontWeight: 700, color: "#475569", letterSpacing: "0.07em", textTransform: "uppercase" }}>
             Filters
-            {isFiltered && (
-              <span style={{
-                marginLeft: 7, fontSize: 10, fontWeight: 700,
-                background: "#EEEDFE", color: "#534AB7",
-                padding: "1px 6px", borderRadius: 999,
-              }}>
-                active
-              </span>
-            )}
           </span>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-            style={{ transition: "transform 0.2s", transform: filtersOpen ? "rotate(0deg)" : "rotate(180deg)" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ transition: "transform 0.2s", transform: filtersOpen ? "rotate(0deg)" : "rotate(180deg)" }}>
             <path d="M6 9l6 6 6-6" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
 
         {filtersOpen && (
           <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Status */}
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-                Status
+                Incident Status
               </label>
-              <FloatSelect value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                {STATUS_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s === "all" ? "All statuses" : s.replace("_", " ")}</option>
+              <FloatSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s === "all" ? "All statuses" : s.replace("_", " ")}
+                  </option>
                 ))}
               </FloatSelect>
             </div>
 
-            {/* Category */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-                Category
-              </label>
-              <FloatSelect
-                value={parentCategoryFilter}
-                onChange={e => { setParentCategoryFilter(e.target.value); setSubcategoryFilter("all"); }}
-              >
-                <option value="all">All categories</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </FloatSelect>
-            </div>
-
-            {/* Subcategory */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-                Subcategory
-              </label>
-              <FloatSelect
-                value={subcategoryFilter}
-                onChange={e => setSubcategoryFilter(e.target.value)}
-                disabled={parentCategoryFilter === "all"}
-              >
-                <option value="all">All subcategories</option>
-                {(selectedParent?.subcategories || []).map(sub => (
-                  <option key={sub.id} value={sub.id}>{sub.name}</option>
-                ))}
-              </FloatSelect>
-            </div>
-
-            {/* Layer toggles */}
             <div style={{ display: "flex", gap: 6, paddingTop: 2 }}>
-              <LayerToggle active={showIncidents} onClick={() => setShowIncidents(p => !p)}>
-                Incidents
+              <LayerToggle active={showIncidents} onClick={() => setShowIncidents((prev) => !prev)}>
+                My Incidents
               </LayerToggle>
-              <LayerToggle active={showLocations} onClick={() => setShowLocations(p => !p)}>
+              <LayerToggle active={showLocations} onClick={() => setShowLocations((prev) => !prev)}>
                 Locations
               </LayerToggle>
             </div>
-
-            {/* Reset */}
-            {isFiltered && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                style={{
-                  padding: "5px 0", borderRadius: 7,
-                  fontSize: 11, fontWeight: 600,
-                  cursor: "pointer", border: "0.5px solid #DDE4EE",
-                  background: "#f8fafc", color: "#64748b",
-                  transition: "background 0.1s",
-                  letterSpacing: "0.01em",
-                }}
-              >
-                Reset filters
-              </button>
-            )}
           </div>
         )}
       </div>
 
-      {/* ── BOTTOM-RIGHT: Legend ── */}
-      <div style={{
-        position: "absolute", bottom: 24, right: 16, zIndex: 800,
-        ...PANEL_STYLE,
-        padding: "10px 14px",
-        display: "flex", flexDirection: "column", gap: 6,
-        minWidth: 130,
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          bottom: 24,
+          right: 16,
+          zIndex: 800,
+          ...PANEL_STYLE,
+          padding: "10px 14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          minWidth: 130,
+        }}
+      >
         <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 2 }}>
           Legend
         </p>
-        {Object.keys(STATUS_MAP).map(s => <LegendItem key={s} status={s} />)}
+        {Object.keys(STATUS_MAP).map((s) => <LegendItem key={s} status={s} />)}
         <div style={{ borderTop: "0.5px solid #DDE4EE", marginTop: 2, paddingTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#14b8a6", flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: "#475569" }}>Location</span>
         </div>
       </div>
 
-      {/* ── Error toast ── */}
       {error && (
-        <div style={{
-          position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)",
-          zIndex: 900,
-          background: "#FCEBEB", border: "0.5px solid #F09595",
-          borderRadius: 10, padding: "10px 16px",
-          fontSize: 13, color: "#A32D2D",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          whiteSpace: "nowrap",
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 70,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 900,
+            background: "#FCEBEB",
+            border: "0.5px solid #F09595",
+            borderRadius: 10,
+            padding: "10px 16px",
+            fontSize: 13,
+            color: "#A32D2D",
+          }}
+        >
           {error}
-        </div>
-      )}
-
-      {/* ── Loading overlay ── */}
-      {loading && (
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 850,
-          background: "rgba(248,250,252,0.7)",
-          backdropFilter: "blur(2px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          gap: 10, fontSize: 14, color: "#475569",
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" style={{ animation: "spin 0.8s linear infinite" }}>
-            <circle cx="12" cy="12" r="10" fill="none" stroke="#378ADD" strokeWidth="2.5" strokeDasharray="40 20" />
-          </svg>
-          Loading map data…
         </div>
       )}
     </div>

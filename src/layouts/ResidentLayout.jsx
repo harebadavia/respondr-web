@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { FaClipboardList, FaGaugeHigh, FaBell, FaBullhorn } from "react-icons/fa6";
+import { FaClipboardList, FaGaugeHigh, FaBell, FaBullhorn, FaMapLocationDot } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "./AppShell";
 
@@ -10,6 +10,7 @@ export default function ResidentLayout() {
   const modules = [
     { label: "Dashboard", to: "/resident/dashboard", icon: FaGaugeHigh },
     { label: "Reports", to: "/resident/incidents", icon: FaClipboardList },
+    { label: "Map", to: "/resident/map", icon: FaMapLocationDot },
     { label: "Alerts", to: "/resident/alerts", icon: FaBell },
     { label: "Announcements", to: "/resident/announcements", icon: FaBullhorn },
   ];

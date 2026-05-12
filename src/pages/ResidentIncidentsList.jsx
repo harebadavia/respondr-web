@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
+import { CircleMarker, MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import {
   FaCloudRain,
   FaCarCrash,
@@ -9,6 +10,7 @@ import {
   FaFire,
   FaPlus,
 } from "react-icons/fa";
+import { FaClipboardList } from "react-icons/fa6";
 import { storage } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { apiAuthRequest } from "../services/api";
@@ -20,6 +22,11 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Textarea from "../components/ui/Textarea";
 import Modal from "../components/ui/Modal";
+import RolePageHeader from "../components/ui/RolePageHeader";
+import { ListToolbar, Pagination } from "../components/ui/ListControls";
+import { DATE_FILTER_OPTIONS, matchesDateFilter, paginateItems } from "../components/ui/listControlUtils";
+
+const DEFAULT_CENTER = [14.425819, 120.886698];
 
 const categoryIcons = {
   "natural-disasters": FaCloudRain,
@@ -29,6 +36,24 @@ const categoryIcons = {
   others: FaShapes,
 };
 
+function MapClickHandler({ onPick }) {
+  useMapEvents({
+    click(event) {
+      onPick(event.latlng.lat, event.latlng.lng);
+    },
+  });
+  return null;
+}
+
+function MapViewport({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!center) return;
+    map.setView(center, 16);
+  }, [center, map]);
+  return null;
+}
+
 export default function ResidentIncidentsList() {
   const { isAuthenticated, firebaseUser } = useAuth();
 
@@ -36,6 +61,11 @@ export default function ResidentIncidentsList() {
   const [loadingIncidents, setLoadingIncidents] = useState(true);
   const [incidentsError, setIncidentsError] = useState("");
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -50,10 +80,13 @@ export default function ResidentIncidentsList() {
   const [form, setForm] = useState({
     title: "",
     description: "",
-    latitude: "",
-    longitude: "",
   });
   const [imageFile, setImageFile] = useState(null);
+  const [pickedPoint, setPickedPoint] = useState(null);
+  const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
@@ -76,8 +109,11 @@ export default function ResidentIncidentsList() {
 
   const filteredIncidents = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return incidents;
     return incidents.filter((incident) => {
+      if (statusFilter !== "all" && incident.status !== statusFilter) return false;
+      if (categoryFilter !== "all" && incident.parent_category_name !== categoryFilter) return false;
+      if (!matchesDateFilter(incident.created_at, dateFilter)) return false;
+      if (!q) return true;
       const category = `${incident.parent_category_name || ""} ${incident.category_name || ""} ${incident.incident_type || ""}`.toLowerCase();
       return (
         incident.title?.toLowerCase().includes(q) ||
@@ -85,7 +121,23 @@ export default function ResidentIncidentsList() {
         category.includes(q)
       );
     });
-  }, [incidents, query]);
+  }, [categoryFilter, dateFilter, incidents, query, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, statusFilter, dateFilter, categoryFilter, pageSize]);
+
+  const statusOptions = useMemo(() => {
+    const statuses = Array.from(new Set(incidents.map((incident) => incident.status).filter(Boolean))).sort();
+    return [{ value: "all", label: "All statuses" }, ...statuses.map((status) => ({ value: status, label: status.replace("_", " ") }))];
+  }, [incidents]);
+
+  const categoryOptions = useMemo(() => {
+    const names = Array.from(new Set(incidents.map((incident) => incident.parent_category_name).filter(Boolean))).sort();
+    return [{ value: "all", label: "All categories" }, ...names.map((name) => ({ value: name, label: name }))];
+  }, [incidents]);
+
+  const pagination = paginateItems(filteredIncidents, page, pageSize);
 
   const loadIncidents = async () => {
     setLoadingIncidents(true);
@@ -136,11 +188,9 @@ export default function ResidentIncidentsList() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setForm((prev) => ({
-          ...prev,
-          latitude: String(position.coords.latitude),
-          longitude: String(position.coords.longitude),
-        }));
+        const point = [position.coords.latitude, position.coords.longitude];
+        setPickedPoint(point);
+        setMapCenter(point);
       },
       () => {
         setSubmitError("Unable to get current location.");
@@ -152,16 +202,53 @@ export default function ResidentIncidentsList() {
   const resetSubmitState = () => {
     setSelectedCategoryId("");
     setSelectedSubcategoryId("");
-    setForm({ title: "", description: "", latitude: "", longitude: "" });
+    setForm({ title: "", description: "" });
     setImageFile(null);
+    setPickedPoint(null);
+    setMapCenter(DEFAULT_CENTER);
+    setSearchQuery("");
+    setSearchResults([]);
     setSubmitError("");
     setSubmitMessage("");
     setPendingAttachment(null);
   };
 
+  const openSubmitModal = () => {
+    resetSubmitState();
+    setSubmitModalOpen(true);
+  };
+
   const closeSubmitModal = () => {
     setSubmitModalOpen(false);
     resetSubmitState();
+  };
+
+  const onPickPoint = (lat, lng) => {
+    const point = [lat, lng];
+    setPickedPoint(point);
+    setMapCenter(point);
+  };
+
+  const searchPlaces = async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearching(true);
+    setSubmitError("");
+    try {
+      const params = new URLSearchParams({
+        q,
+        format: "jsonv2",
+        limit: "5",
+      });
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
+      if (!response.ok) throw new Error("Place search failed.");
+      const data = await response.json();
+      setSearchResults(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setSubmitError(err.message || "Unable to search places.");
+    } finally {
+      setSearching(false);
+    }
   };
 
   const registerAttachment = async (incidentId, metadata) => {
@@ -195,10 +282,10 @@ export default function ResidentIncidentsList() {
         throw new Error("Please select a report subcategory.");
       }
 
-      const latitude = Number(form.latitude);
-      const longitude = Number(form.longitude);
+      const latitude = pickedPoint?.[0];
+      const longitude = pickedPoint?.[1];
       if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-        throw new Error("Latitude and longitude are required numbers.");
+        throw new Error("Please pin your report location on the map.");
       }
 
       const payload = {
@@ -291,53 +378,50 @@ export default function ResidentIncidentsList() {
   return (
     <>
       <section className="space-y-4">
-        <div className="rounded-2xl border border-[var(--color-border-tertiary)] bg-white px-5 py-5 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">Reports</h1>
+        <RolePageHeader
+          role="resident"
+          title="Reports"
+          subtitle="Submit and track your incident reports."
+          icon={FaClipboardList}
+          right={(
+            <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-xs font-bold text-[#3B6D11]">
                 {incidents.length}
               </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => loadIncidents()}
-                className="rounded-full border border-[var(--color-border-secondary)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-background-secondary)]"
-              >
+              <Button type="button" variant="secondary" onClick={() => loadIncidents()}>
                 Refresh
-              </button>
-              <button
-                type="button"
-                onClick={() => setSubmitModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-[#185FA5] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0C447C]"
-              >
+              </Button>
+              <Button type="button" onClick={openSubmitModal}>
                 <FaPlus /> File a report
-              </button>
+              </Button>
             </div>
-          </div>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Submit and track your incident reports.</p>
-        </div>
+          )}
+        />
 
-        <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-tertiary)] bg-white px-4 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
-          <span className="text-[var(--color-text-tertiary)]">🔍</span>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search reports"
-            className="border-0 p-0 text-sm focus:ring-0"
-          />
-        </div>
+        <ListToolbar
+          searchValue={query}
+          onSearchChange={setQuery}
+          searchPlaceholder="Search reports"
+          filters={[
+            { id: "status", label: "Status", value: statusFilter, onChange: setStatusFilter, options: statusOptions },
+            { id: "category", label: "Category", value: categoryFilter, onChange: setCategoryFilter, options: categoryOptions },
+            { id: "date", label: "Date", value: dateFilter, onChange: setDateFilter, options: DATE_FILTER_OPTIONS },
+          ]}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+        />
 
         {incidentsError && <Alert tone="error">{incidentsError}</Alert>}
         {categoriesError && <Alert tone="error">{categoriesError}</Alert>}
 
         {loadingIncidents ? (
           <Card><p className="text-neutral-600">Loading reports...</p></Card>
-        ) : filteredIncidents.length === 0 ? (
+        ) : incidents.length === 0 ? (
           <Card><p className="text-neutral-600">No reports yet.</p></Card>
+        ) : filteredIncidents.length === 0 ? (
+          <Card><p className="text-neutral-600">No reports match your filters.</p></Card>
         ) : (
-          filteredIncidents.map((incident) => (
+          pagination.pageItems.map((incident) => (
             <div
               key={incident.id}
               onClick={() => openDetailModal(incident.id)}
@@ -371,7 +455,6 @@ export default function ResidentIncidentsList() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
-                    className="px-3 py-1.5 text-xs"
                     onClick={(event) => {
                       event.stopPropagation();
                       openDetailModal(incident.id);
@@ -383,6 +466,17 @@ export default function ResidentIncidentsList() {
               </Card>
             </div>
           ))
+        )}
+
+        {!loadingIncidents && filteredIncidents.length > 0 && (
+          <Pagination
+            page={pagination.safePage}
+            totalPages={pagination.totalPages}
+            totalItems={filteredIncidents.length}
+            start={pagination.start}
+            end={pagination.end}
+            onPageChange={setPage}
+          />
         )}
       </section>
 
@@ -443,9 +537,63 @@ export default function ResidentIncidentsList() {
             <Input name="title" label="Title" value={form.title} onChange={onChange} required />
             <Textarea name="description" label="Description" value={form.description} onChange={onChange} rows={4} required />
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <Input name="latitude" label="Latitude" value={form.latitude} onChange={onChange} required />
-              <Input name="longitude" label="Longitude" value={form.longitude} onChange={onChange} required />
+            <div>
+              <label>Search Place</label>
+              <div className="flex gap-2">
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search address or landmark"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={searchPlaces}
+                  disabled={searching || !searchQuery.trim()}
+                >
+                  {searching ? "Searching..." : "Search"}
+                </Button>
+              </div>
+            </div>
+
+            {searchResults.length > 0 ? (
+              <div className="max-h-36 overflow-y-auto rounded-lg border border-[var(--color-border-tertiary)] p-2">
+                {searchResults.map((result) => (
+                  <button
+                    key={result.place_id}
+                    type="button"
+                    onClick={() => onPickPoint(Number(result.lat), Number(result.lon))}
+                    className="w-full rounded-md px-2 py-2 text-left text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)]"
+                  >
+                    {result.display_name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <div>
+              <label>Pin Location</label>
+              <div className="overflow-hidden rounded-xl border border-[var(--color-border-tertiary)]">
+                <MapContainer center={mapCenter} zoom={16} style={{ width: "100%", height: 260 }} scrollWheelZoom>
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <MapClickHandler onPick={onPickPoint} />
+                  <MapViewport center={mapCenter} />
+                  {pickedPoint ? (
+                    <CircleMarker
+                      center={pickedPoint}
+                      radius={8}
+                      pathOptions={{ color: "#185FA5", fillColor: "#378ADD", fillOpacity: 0.9, weight: 2 }}
+                    />
+                  ) : null}
+                </MapContainer>
+              </div>
+              <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
+                Click on the map to pin your report location.
+                {pickedPoint ? ` Pinned: ${pickedPoint[0].toFixed(6)}, ${pickedPoint[1].toFixed(6)}` : ""}
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -454,14 +602,19 @@ export default function ResidentIncidentsList() {
 
             <div>
               <label>Image (optional, auto-compressed to &lt; 400KB)</label>
-              <input
-                type="file"
-                accept="image/jpeg,image/webp,image/*"
-                onChange={(event) => {
-                  const nextFile = event.target.files?.[0] || null;
-                  setImageFile(nextFile);
-                }}
-              />
+              <div className="rounded-xl border border-dashed border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-3 py-3">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/webp,image/*"
+                  onChange={(event) => {
+                    const nextFile = event.target.files?.[0] || null;
+                    setImageFile(nextFile);
+                  }}
+                />
+                <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
+                  {imageFile ? `Selected: ${imageFile.name}` : "No image selected."}
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">

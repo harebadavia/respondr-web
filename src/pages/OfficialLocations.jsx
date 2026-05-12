@@ -1,13 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { CircleMarker, MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { useAuth } from "../context/AuthContext";
 import { apiAuthRequest } from "../services/api";
 import Modal from "../components/ui/Modal";
+import RolePageHeader from "../components/ui/RolePageHeader";
+import Button from "../components/ui/Button";
+import { ListToolbar, Pagination } from "../components/ui/ListControls";
+import { paginateItems } from "../components/ui/listControlUtils";
+import { FaLocationDot } from "react-icons/fa6";
+
+const DEFAULT_CENTER = [14.425819, 120.886698];
 
 const INITIAL_FORM = {
   name: "",
   description: "",
-  latitude: "",
-  longitude: "",
   is_active: "true",
 };
 
@@ -22,50 +28,37 @@ function toPayload(form) {
   return {
     name: form.name.trim(),
     description: form.description.trim() || null,
-    latitude: Number(form.latitude),
-    longitude: Number(form.longitude),
     is_active: form.is_active === "true",
   };
 }
 
-function ActionButton({ children, onClick, disabled, danger }) {
-  const [hover, setHover] = useState(false);
-  const style = danger
-    ? {
-        border: "0.5px solid #F09595",
-        color: "#A32D2D",
-        background: hover ? "#FCEBEB" : "transparent",
-      }
-    : {
-        border: "0.5px solid var(--color-border-secondary)",
-        color: "var(--color-text-primary)",
-        background: hover ? "var(--color-background-secondary)" : "transparent",
-      };
+function MapClickHandler({ onPick }) {
+  useMapEvents({
+    click(event) {
+      onPick(event.latlng.lat, event.latlng.lng);
+    },
+  });
+  return null;
+}
 
+function MapViewport({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!center) return;
+    map.setView(center, 16);
+  }, [center, map]);
+  return null;
+}
+
+function ActionButton({ children, onClick, disabled, danger }) {
   return (
-    <button
-      type="button"
+    <Button
       onClick={onClick}
       disabled={disabled}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "6px 14px",
-        borderRadius: 8,
-        fontSize: 12,
-        fontWeight: 500,
-        cursor: disabled ? "not-allowed" : "pointer",
-        transition: "all 0.12s",
-        opacity: disabled ? 0.55 : 1,
-        whiteSpace: "nowrap",
-        ...style,
-      }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      variant={danger ? "danger" : "secondary"}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -92,96 +85,22 @@ function InlineAlert({ children, tone }) {
 
 function PageHeader({ onCreate, refreshing, onRefresh }) {
   return (
-    <div
-      style={{
-        padding: "26px 32px 24px",
-        borderBottom: "0.5px solid var(--color-border-tertiary)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-        flexWrap: "wrap",
-        background: "var(--color-background-primary)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: "#E6F1FB",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M12 3l8 4v5c0 5.4-3.8 8.9-8 10-4.2-1.1-8-4.6-8-10V7l8-4z" fill="#378ADD" opacity="0.2" />
-            <path d="M12 3l8 4v5c0 5.4-3.8 8.9-8 10-4.2-1.1-8-4.6-8-10V7l8-4z" stroke="#378ADD" strokeWidth="1.5" />
-            <path d="M8.5 12.5h7M8.5 15h4.5" stroke="#185FA5" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
+    <RolePageHeader
+      title="Locations"
+      subtitle="Manage barangay landmarks and evacuation points."
+      role="official"
+      icon={FaLocationDot}
+      right={(
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <ActionButton onClick={onRefresh} disabled={refreshing}>
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </ActionButton>
+          <Button type="button" onClick={onCreate}>
+            Add Location
+          </Button>
         </div>
-
-        <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 600,
-                color: "var(--color-text-primary)",
-                letterSpacing: "-0.025em",
-              }}
-            >
-              Locations
-            </h1>
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.07em",
-                textTransform: "uppercase",
-                background: "#E6F1FB",
-                color: "#185FA5",
-                padding: "2px 8px",
-                borderRadius: 999,
-                position: "relative",
-                top: -1,
-              }}
-            >
-              Official
-            </span>
-          </div>
-          <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-            Manage barangay landmarks and evacuation points.
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <ActionButton onClick={onRefresh} disabled={refreshing}>
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </ActionButton>
-        <button
-          type="button"
-          onClick={onCreate}
-          style={{
-            border: "none",
-            borderRadius: 8,
-            background: "#185FA5",
-            color: "#fff",
-            fontSize: 13,
-            fontWeight: 500,
-            padding: "8px 14px",
-            cursor: "pointer",
-          }}
-        >
-          Add Location
-        </button>
-      </div>
-    </div>
+      )}
+    />
   );
 }
 
@@ -189,6 +108,10 @@ export default function OfficialLocations() {
   const { isAuthenticated } = useAuth();
 
   const [locations, setLocations] = useState([]);
+  const [locationSearchTerm, setLocationSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -197,6 +120,11 @@ export default function OfficialLocations() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [pickedPoint, setPickedPoint] = useState(null);
+  const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
 
   const loadLocations = async () => {
     setLoading(true);
@@ -217,9 +145,35 @@ export default function OfficialLocations() {
     loadLocations();
   }, [isAuthenticated]);
 
+  const filteredLocations = useMemo(() => {
+    const query = locationSearchTerm.trim().toLowerCase();
+    return locations.filter((location) => {
+      if (statusFilter === "active" && !location.is_active) return false;
+      if (statusFilter === "inactive" && location.is_active) return false;
+      if (!query) return true;
+      return [
+        location.name,
+        location.description,
+        location.is_active ? "active" : "inactive",
+        location.latitude,
+        location.longitude,
+      ].join(" ").toLowerCase().includes(query);
+    });
+  }, [locations, locationSearchTerm, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [locationSearchTerm, statusFilter, pageSize]);
+
+  const pagination = paginateItems(filteredLocations, page, pageSize);
+
   const openCreate = () => {
     setEditingId(null);
     setForm(INITIAL_FORM);
+    setPickedPoint(null);
+    setMapCenter(DEFAULT_CENTER);
+    setSearchQuery("");
+    setSearchResults([]);
     setMessage("");
     setError("");
     setModalOpen(true);
@@ -230,10 +184,18 @@ export default function OfficialLocations() {
     setForm({
       name: location.name || "",
       description: location.description || "",
-      latitude: String(location.latitude ?? ""),
-      longitude: String(location.longitude ?? ""),
       is_active: location.is_active ? "true" : "false",
     });
+    if (Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
+      const point = [Number(location.latitude), Number(location.longitude)];
+      setPickedPoint(point);
+      setMapCenter(point);
+    } else {
+      setPickedPoint(null);
+      setMapCenter(DEFAULT_CENTER);
+    }
+    setSearchQuery("");
+    setSearchResults([]);
     setMessage("");
     setError("");
     setModalOpen(true);
@@ -241,6 +203,36 @@ export default function OfficialLocations() {
 
   const onChange = (event) => {
     setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
+  };
+
+  const onPickPoint = (lat, lng) => {
+    const point = [lat, lng];
+    setPickedPoint(point);
+    setMapCenter(point);
+  };
+
+  const searchPlaces = async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearching(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        q,
+        format: "jsonv2",
+        limit: "5",
+      });
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error("Place search failed.");
+      }
+      const data = await response.json();
+      setSearchResults(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message || "Unable to search places.");
+    } finally {
+      setSearching(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -251,11 +243,15 @@ export default function OfficialLocations() {
 
     try {
       const payload = toPayload(form);
+      const lat = pickedPoint?.[0];
+      const lng = pickedPoint?.[1];
 
       if (!payload.name) throw new Error("Name is required.");
-      if (!Number.isFinite(payload.latitude) || !Number.isFinite(payload.longitude)) {
-        throw new Error("Latitude and longitude must be valid numbers.");
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new Error("Please pin a location on the map.");
       }
+      payload.latitude = lat;
+      payload.longitude = lng;
 
       if (editingId) {
         await apiAuthRequest(`/locations/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
@@ -298,21 +294,41 @@ export default function OfficialLocations() {
 
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <section className="space-y-4">
         <PageHeader onCreate={openCreate} onRefresh={loadLocations} refreshing={loading} />
 
         <div
           style={{
             background: "var(--color-background-tertiary)",
-            flex: 1,
-            padding: "28px 32px 48px",
             display: "flex",
             flexDirection: "column",
-            gap: 14,
+            gap: 16,
+            borderRadius: 16,
           }}
         >
           {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
           {message ? <InlineAlert tone="success">{message}</InlineAlert> : null}
+
+          <ListToolbar
+            searchValue={locationSearchTerm}
+            onSearchChange={setLocationSearchTerm}
+            searchPlaceholder="Search locations"
+            filters={[
+              {
+                id: "status",
+                label: "Status",
+                value: statusFilter,
+                onChange: setStatusFilter,
+                options: [
+                  { value: "all", label: "All statuses" },
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Inactive" },
+                ],
+              },
+            ]}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+          />
 
           {loading ? (
             <div style={{ ...SURFACE_CARD_STYLE, padding: "40px 24px", textAlign: "center", color: "var(--color-text-tertiary)", fontSize: 14 }}>
@@ -322,9 +338,13 @@ export default function OfficialLocations() {
             <div style={{ ...SURFACE_CARD_STYLE, padding: "40px 24px", textAlign: "center", color: "var(--color-text-tertiary)", fontSize: 14 }}>
               No locations yet.
             </div>
+          ) : filteredLocations.length === 0 ? (
+            <div style={{ ...SURFACE_CARD_STYLE, padding: "40px 24px", textAlign: "center", color: "var(--color-text-tertiary)", fontSize: 14 }}>
+              No locations match your search.
+            </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {locations.map((location) => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {pagination.pageItems.map((location) => (
                 <div key={location.id} style={{ ...SURFACE_CARD_STYLE, padding: "18px 22px" }}>
                   <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                     <div style={{ minWidth: 0 }}>
@@ -354,8 +374,19 @@ export default function OfficialLocations() {
               ))}
             </div>
           )}
+
+          {!loading && filteredLocations.length > 0 ? (
+            <Pagination
+              page={pagination.safePage}
+              totalPages={pagination.totalPages}
+              totalItems={filteredLocations.length}
+              start={pagination.start}
+              end={pagination.end}
+              onPageChange={setPage}
+            />
+          ) : null}
         </div>
-      </div>
+      </section>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "Edit Location" : "Add Location"}>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -369,15 +400,77 @@ export default function OfficialLocations() {
             <textarea name="description" value={form.description} onChange={onChange} rows={3} />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label>Latitude</label>
-              <input name="latitude" value={form.latitude} onChange={onChange} required />
+          <div>
+            <label>Search Place</label>
+            <div className="flex gap-2">
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search address or landmark"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={searchPlaces}
+                disabled={searching || !searchQuery.trim()}
+              >
+                {searching ? "Searching..." : "Search"}
+              </Button>
             </div>
-            <div>
-              <label>Longitude</label>
-              <input name="longitude" value={form.longitude} onChange={onChange} required />
+          </div>
+
+          {searchResults.length > 0 ? (
+            <div style={{ border: "1px solid var(--color-border-tertiary)", borderRadius: 10, maxHeight: 140, overflowY: "auto", padding: 8 }}>
+              {searchResults.map((result) => (
+                <button
+                  key={result.place_id}
+                  type="button"
+                  onClick={() => onPickPoint(Number(result.lat), Number(result.lon))}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    border: "none",
+                    background: "transparent",
+                    padding: "8px 6px",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  {result.display_name}
+                </button>
+              ))}
             </div>
+          ) : null}
+
+          <div>
+            <label>Pin Location</label>
+            <div style={{ border: "1px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden" }}>
+              <MapContainer
+                center={mapCenter}
+                zoom={16}
+                style={{ width: "100%", height: 280 }}
+                scrollWheelZoom
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapClickHandler onPick={onPickPoint} />
+                <MapViewport center={mapCenter} />
+                {pickedPoint ? (
+                  <CircleMarker
+                    center={pickedPoint}
+                    radius={8}
+                    pathOptions={{ color: "#0f766e", fillColor: "#14b8a6", fillOpacity: 0.9, weight: 2 }}
+                  />
+                ) : null}
+              </MapContainer>
+            </div>
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: "var(--color-text-tertiary)" }}>
+              Click on the map to pin a location.
+              {pickedPoint ? ` Pinned: ${pickedPoint[0].toFixed(6)}, ${pickedPoint[1].toFixed(6)}` : ""}
+            </p>
           </div>
 
           <div>
@@ -389,9 +482,9 @@ export default function OfficialLocations() {
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
-            <button type="submit" disabled={submitting} style={{ border: "none", borderRadius: 8, background: "#185FA5", color: "#fff", fontSize: 13, fontWeight: 500, padding: "8px 14px", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.6 : 1 }}>
+            <Button type="submit" disabled={submitting}>
               {submitting ? "Saving..." : "Save"}
-            </button>
+            </Button>
             <ActionButton onClick={() => setModalOpen(false)}>Cancel</ActionButton>
           </div>
         </form>

@@ -7,7 +7,6 @@ import {
   FaListCheck,
   FaCircleCheck,
 } from "react-icons/fa6";
-import PageContainer from "../components/ui/PageContainer";
 import { apiAuthRequest } from "../services/api";
 
 const STATUS_MAP = {
@@ -100,69 +99,105 @@ function SectionLabel({ children }) {
 
 function DashboardHeader() {
   const now = new Date();
-  const date = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const date = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div
-      style={{
-        padding: "26px 32px 24px",
-        borderBottom: "0.5px solid var(--color-border-tertiary)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-        flexWrap: "wrap",
-        background: "var(--color-background-primary)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+    <div style={{
+      padding: "32px 36px 28px",
+      borderBottom: "1px solid var(--color-border-tertiary)",
+      borderRadius: 16,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 24,
+      flexWrap: "wrap",
+      background: "var(--color-background-primary)",
+      position: "relative",
+      overflow: "hidden",
+    }}>
+      <div style={{
+        position: "absolute",
+        top: -80,
+        right: -40,
+        width: 300,
+        height: 300,
+        background: "radial-gradient(circle, rgba(55,138,221,0.08) 0%, rgba(255,255,255,0) 60%)",
+        borderRadius: "50%",
+        pointerEvents: "none",
+      }} />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 18, zIndex: 1 }}>
         <div
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: "#E6F1FB",
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            background: "linear-gradient(135deg, #E6F1FB 0%, #D9EFFF 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
+            boxShadow: "0 4px 12px rgba(24, 95, 165, 0.12), inset 0 2px 0 rgba(255, 255, 255, 0.6)",
           }}
         >
-          <FaClipboardCheck style={{ fontSize: 18, color: "#185FA5" }} />
+          <FaClipboardCheck style={{ fontSize: 20, color: "#185FA5" }} />
         </div>
 
         <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--color-text-primary)", letterSpacing: "-0.025em", lineHeight: 1.25 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h1 style={{
+              margin: 0,
+              fontSize: 24,
+              fontWeight: 700,
+              color: "var(--color-text-primary)",
+              letterSpacing: "-0.03em",
+              lineHeight: 1.2,
+            }}>
               Official Dashboard
             </h1>
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.07em",
-                textTransform: "uppercase",
-                background: "#E6F1FB",
-                color: "#185FA5",
-                padding: "2px 8px",
-                borderRadius: 999,
-                position: "relative",
-                top: -1,
-              }}
-            >
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              background: "#E6F1FB",
+              color: "#185FA5",
+              padding: "2px 10px",
+              borderRadius: 999,
+            }}>
               Official
             </span>
           </div>
-          <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
+          <p style={{
+            margin: "6px 0 0",
+            fontSize: 14,
+            color: "var(--color-text-secondary)",
+            lineHeight: 1.5,
+          }}>
             Incident triage, response operations, and public communication overview.
           </p>
         </div>
       </div>
 
-      <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", flexShrink: 0, whiteSpace: "nowrap" }}>
-        {date} · {time}
-      </span>
+      <div style={{ zIndex: 1, flexShrink: 0 }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 16px", borderRadius: 999,
+          background: "var(--color-background-secondary, #F8FAFC)",
+          border: "1px solid var(--color-border-tertiary)",
+          color: "var(--color-text-secondary)", fontSize: 13, fontWeight: 500,
+          boxShadow: "inset 0 1px 2px rgba(0,0,0,0.02)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 8px rgba(16, 185, 129, 0.6)" }} />
+          </div>
+          <span style={{ color: "var(--color-text-primary)" }}>{date}</span>
+          <span style={{ opacity: 0.3 }}>|</span>
+          <span style={{ width: "65px", textAlign: "right" }}>{time}</span>
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -220,12 +255,14 @@ function MetricCard({ label, value, subtext, shortcutLabel, onShortcut, index })
 
 function Shell({ children }) {
   return (
-    <PageContainer className="!max-w-none px-0 py-0">
-      <DashboardHeader />
-      <div style={{ background: "var(--color-background-tertiary)", minHeight: "calc(100vh - 97px)", padding: "28px 32px 48px" }}>
-        {children}
+    <section className="space-y-4">
+      <div style={{ background: "var(--color-background-tertiary)", borderRadius: 16 }}>
+        <DashboardHeader />
+        <div style={{ marginTop: 22 }}>
+          {children}
+        </div>
       </div>
-    </PageContainer>
+    </section>
   );
 }
 
@@ -303,14 +340,14 @@ export default function OfficialDashboard() {
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
         <div>
           <SectionLabel>Overview</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             {metrics.map((m, i) => <MetricCard key={m.label} {...m} index={i} />)}
           </div>
         </div>
 
         <div>
           <SectionLabel>Operations</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
             <div style={CARD_STYLE}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Incident Triage Queue</p>

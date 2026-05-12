@@ -7,7 +7,6 @@ import { apiAuthRequest } from "../services/api";
 import Card from "../components/ui/Card";
 import StatusChip from "../components/ui/StatusChip";
 import Alert from "../components/ui/Alert";
-import PageContainer from "../components/ui/PageContainer";
 
 export default function ResidentIncidentDetail() {
   const { id } = useParams();
@@ -42,7 +41,7 @@ export default function ResidentIncidentDetail() {
   }, [id, isAuthenticated]);
 
   return (
-    <PageContainer className="px-0 py-0">
+    <section>
       <Card>
         {loading && <p className="text-neutral-600">Loading incident...</p>}
         {!loading && error && <Alert tone="error">{error}</Alert>}
@@ -76,6 +75,6 @@ export default function ResidentIncidentDetail() {
           </>
         )}
       </Card>
-    </PageContainer>
+    </section>
   );
 }

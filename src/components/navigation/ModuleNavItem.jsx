@@ -9,7 +9,7 @@ export default function ModuleNavItem({ to, label, Icon, collapsed, onNavigate }
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cx(
-          "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition",
+          "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-brand-500",
           isActive
             ? "bg-brand-100 text-brand-800"
             : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
@@ -17,8 +17,8 @@ export default function ModuleNavItem({ to, label, Icon, collapsed, onNavigate }
         )
       }
     >
-      {Icon ? <Icon className="text-base" /> : null}
-      {!collapsed && <span>{label}</span>}
+      {Icon ? <Icon className="flex-shrink-0 text-base" /> : null}
+      {!collapsed && <span className="truncate">{label}</span>}
     </NavLink>
   );
 }

@@ -29,7 +29,7 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
   }, [mobileOpen]);
 
   const desktopSidebarWidth = useMemo(
-    () => (collapsed ? "md:w-[84px]" : "md:w-[280px]"),
+    () => (collapsed ? "md:w-[84px]" : "md:w-[300px]"),
     [collapsed]
   );
 
@@ -45,7 +45,6 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
             modules={modules}
             firstName={userFirstName}
             email={userEmail}
-            role={role}
             profileTo={profileTo}
             onLogout={onLogout}
             onNavigate={() => {}}
@@ -55,7 +54,7 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
         {mobileOpen && (
           <div className="fixed inset-0 z-40 bg-neutral-900/40 md:hidden" onClick={() => setMobileOpen(false)}>
             <aside
-              className="h-full w-[280px] border-r border-[var(--color-border-tertiary)] bg-white"
+              className="h-full w-[300px] max-w-[86vw] border-r border-[var(--color-border-tertiary)] bg-white"
               onClick={(event) => event.stopPropagation()}
             >
               <SideNav
@@ -64,7 +63,6 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
                 modules={modules}
                 firstName={userFirstName}
                 email={userEmail}
-                role={role}
                 profileTo={profileTo}
                 onLogout={onLogout}
                 mobile

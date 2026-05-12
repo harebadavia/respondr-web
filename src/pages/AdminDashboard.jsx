@@ -7,7 +7,6 @@ import {
   FaBell,
   FaMessage,
 } from "react-icons/fa6";
-import PageContainer from "../components/ui/PageContainer";
 import { apiAuthRequest } from "../services/api";
 
 /* ─── Palette tokens ─────────────────────────────────────────── */
@@ -123,6 +122,7 @@ function DashboardHeader() {
     <div style={{
       padding: "32px 36px 28px", // Slightly roomier padding
       borderBottom: "1px solid var(--color-border-tertiary)",
+      borderRadius: 16,
       display: "flex", alignItems: "center",
       justifyContent: "space-between",
       gap: 24, flexWrap: "wrap",
@@ -166,8 +166,7 @@ function DashboardHeader() {
               fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
               textTransform: "uppercase",
               background: "#EEEDFE", color: "#534AB7",
-              border: "1px solid rgba(83, 74, 183, 0.15)",
-              padding: "4px 10px", borderRadius: 6,
+              padding: "2px 10px", borderRadius: 999,
             }}>
               Admin
             </span>
@@ -270,17 +269,14 @@ function MetricCard({ label, value, subtext, shortcutLabel, onShortcut, index })
 /* ─── Page shell (shared wrapper) ───────────────────────────── */
 function Shell({ children }) {
   return (
-    <PageContainer className="!max-w-none px-0 py-0">
-      <DashboardHeader />
-      {/* Grey body — white cards float on top of this */}
-      <div style={{
-        background: "var(--color-background-tertiary)",
-        minHeight: "calc(100vh - 97px)",
-        padding: "28px 32px 48px",
-      }}>
-        {children}
+    <section className="space-y-4">
+      <div style={{ background: "var(--color-background-tertiary)", borderRadius: 16 }}>
+        <DashboardHeader />
+        <div style={{ marginTop: 22 }}>
+          {children}
+        </div>
       </div>
-    </PageContainer>
+    </section>
   );
 }
 
@@ -394,7 +390,7 @@ export default function AdminDashboard() {
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 14,
+            gap: 16,
           }}>
             {metrics.map((m, i) => (
               <MetricCard key={m.label} {...m} index={i} />
@@ -408,7 +404,7 @@ export default function AdminDashboard() {
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 14,
+            gap: 16,
           }}>
 
             {/* Unresolved Incidents */}

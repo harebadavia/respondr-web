@@ -13,6 +13,7 @@ import ResidentIncidentsList from "./pages/ResidentIncidentsList";
 import ResidentIncidentDetail from "./pages/ResidentIncidentDetail";
 import ResidentAlerts from "./pages/ResidentAlerts";
 import ResidentAnnouncements from "./pages/ResidentAnnouncements";
+import ResidentMap from "./pages/ResidentMap";
 import OfficialIncidents from "./pages/OfficialIncidents";
 import OfficialMap from "./pages/OfficialMap";
 import OfficialLocations from "./pages/OfficialLocations";
@@ -58,6 +59,7 @@ function App() {
           <Route path="incidents/new" element={<ResidentIncidentsNew />} />
           <Route path="incidents" element={<ResidentIncidentsList />} />
           <Route path="incidents/:id" element={<ResidentIncidentDetail />} />
+          <Route path="map" element={<ResidentMap />} />
           <Route path="alerts" element={<ResidentAlerts />} />
           <Route path="announcements" element={<ResidentAnnouncements />} />
           <Route path="profile" element={<Profile />} />

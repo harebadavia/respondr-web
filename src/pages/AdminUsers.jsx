@@ -1,21 +1,89 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiAuthRequest } from "../services/api";
-import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
-import PageContainer from "../components/ui/PageContainer";
-import RolePageHeader from "../components/ui/RolePageHeader";
 import ToastStack from "../components/ui/ToastStack";
+import RolePageHeader from "../components/ui/RolePageHeader";
+import { ListToolbar, Pagination } from "../components/ui/ListControls";
+import { paginateItems } from "../components/ui/listControlUtils";
+import { FaUsersGear } from "react-icons/fa6";
 
 const ROLE_OPTIONS = ["resident", "official", "admin"];
+const ROLE_COLORS = {
+  admin: { bg: "#EEEDFE", text: "#534AB7" },
+  official: { bg: "#E6F1FB", text: "#185FA5" },
+  resident: { bg: "#EAF3DE", text: "#3B6D11" },
+};
+const CARD_STYLE = {
+  background: "#FFFFFF",
+  border: "1px solid #DDE4EE",
+  borderRadius: 16,
+  padding: "22px 24px",
+  overflow: "hidden",
+  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.06)",
+};
+const thStyle = {
+  padding: "0 12px 10px 0",
+  fontSize: 11,
+  fontWeight: 600,
+  color: "var(--color-text-tertiary)",
+  textAlign: "left",
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  borderBottom: "0.5px solid var(--color-border-tertiary)",
+  whiteSpace: "nowrap",
+};
+const tdStyle = {
+  padding: "11px 12px 11px 0",
+  fontSize: 13,
+  color: "var(--color-text-primary)",
+  borderBottom: "0.5px solid var(--color-border-tertiary)",
+  verticalAlign: "middle",
+};
 
 function prettyRole(role) {
   return String(role || "").replace("_", " ");
 }
 
+function SectionLabel({ children }) {
+  return (
+    <p style={{
+      margin: "0 0 12px",
+      fontSize: 11,
+      fontWeight: 700,
+      color: "var(--color-text-tertiary)",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+    }}>
+      {children}
+    </p>
+  );
+}
+
+function UsersHeader({ onAddUser }) {
+  return (
+    <RolePageHeader
+      title="Users"
+      subtitle="Manage user profile, role, and account activation status."
+      role="admin"
+      icon={FaUsersGear}
+      right={(
+        <div style={{ flexShrink: 0 }}>
+          <Button onClick={onAddUser}>Add User</Button>
+        </div>
+      )}
+    />
+  );
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
 
@@ -71,6 +139,32 @@ export default function AdminUsers() {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  const filteredUsers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return users.filter((user) => {
+      const role = String(user.role || "").toLowerCase();
+      if (roleFilter !== "all" && role !== roleFilter) return false;
+      if (statusFilter === "active" && !user.is_active) return false;
+      if (statusFilter === "inactive" && user.is_active) return false;
+      if (!query) return true;
+      return [
+        user.first_name,
+        user.last_name,
+        `${user.first_name || ""} ${user.last_name || ""}`,
+        user.email,
+        user.phone_number,
+        user.role,
+        user.is_active ? "active" : "inactive",
+      ].join(" ").toLowerCase().includes(query);
+    });
+  }, [roleFilter, searchTerm, statusFilter, users]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, roleFilter, statusFilter, pageSize]);
+
+  const pagination = paginateItems(filteredUsers, page, pageSize);
 
   const onCreateChange = (event) => {
     const { name, value } = event.target;
@@ -186,61 +280,126 @@ export default function AdminUsers() {
   };
 
   return (
-    <PageContainer className="space-y-4 !max-w-none px-0 py-0">
+    <section className="space-y-4">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
-      <RolePageHeader
-        role="admin"
-        title="Admin Users"
-        subtitle="Manage user profile, role, and account activation status."
-        right={<Button onClick={openCreateModal}>Add User</Button>}
+      <UsersHeader onAddUser={openCreateModal} />
+
+      <ListToolbar
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search users"
+        filters={[
+          {
+            id: "role",
+            label: "Role",
+            value: roleFilter,
+            onChange: setRoleFilter,
+            options: [
+              { value: "all", label: "All roles" },
+              ...ROLE_OPTIONS.map((role) => ({ value: role, label: prettyRole(role) })),
+            ],
+          },
+          {
+            id: "status",
+            label: "Status",
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { value: "all", label: "All statuses" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ],
+          },
+        ]}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
       />
 
-      {loading ? (
-        <Card><p className="text-neutral-600">Loading users...</p></Card>
-      ) : users.length === 0 ? (
-        <Card><p className="text-neutral-600">No users found.</p></Card>
-      ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-neutral-200 text-sm">
-              <thead>
-                <tr className="text-left text-neutral-600">
-                  <th className="px-3 py-2 font-semibold">Name</th>
-                  <th className="px-3 py-2 font-semibold">Email</th>
-                  <th className="px-3 py-2 font-semibold">Role</th>
-                  <th className="px-3 py-2 font-semibold">Status</th>
-                  <th className="px-3 py-2 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td className="px-3 py-2 text-neutral-800">{user.first_name} {user.last_name}</td>
-                    <td className="px-3 py-2 text-neutral-700">{user.email}</td>
-                    <td className="px-3 py-2">
-                      <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-700">
-                        {prettyRole(user.role)}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${user.is_active ? "bg-emerald-100 text-emerald-800" : "bg-neutral-200 text-neutral-700"}`}>
-                        {user.is_active ? "active" : "inactive"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="button" variant="secondary" onClick={() => openViewModal(user)}>View</Button>
-                        <Button type="button" onClick={() => openEditModal(user)}>Edit</Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+      <div style={{ marginTop: 22 }}>
+        {loading ? (
+          <div style={CARD_STYLE}><p className="text-neutral-600">Loading users...</p></div>
+        ) : users.length === 0 ? (
+          <div style={CARD_STYLE}><p className="text-neutral-600">No users found.</p></div>
+        ) : filteredUsers.length === 0 ? (
+          <div style={CARD_STYLE}><p className="text-neutral-600">No users match your search.</p></div>
+        ) : (
+          <div style={CARD_STYLE}>
+            <SectionLabel>User Directory</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Name</th>
+                      <th style={thStyle}>Email</th>
+                      <th style={thStyle}>Role</th>
+                      <th style={thStyle}>Status</th>
+                      <th style={thStyle}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagination.pageItems.map((user) => {
+                      const role = String(user.role || "").toLowerCase();
+                      const roleColor = ROLE_COLORS[role] || { bg: "#F1EFE8", text: "#5F5E5A" };
 
+                      return (
+                        <tr key={user.id}>
+                          <td style={tdStyle}>{user.first_name} {user.last_name}</td>
+                          <td style={{ ...tdStyle, color: "var(--color-text-secondary)" }}>{user.email}</td>
+                          <td style={tdStyle}>
+                            <span style={{
+                              padding: "2px 9px",
+                              borderRadius: 999,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              background: roleColor.bg,
+                              color: roleColor.text,
+                              textTransform: "capitalize",
+                              letterSpacing: "0.02em",
+                            }}>
+                              {prettyRole(user.role)}
+                            </span>
+                          </td>
+                          <td style={tdStyle}>
+                            <span style={{
+                              padding: "2px 9px",
+                              borderRadius: 999,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              letterSpacing: "0.03em",
+                              textTransform: "uppercase",
+                              background: user.is_active ? "#EAF3DE" : "#F1EFE8",
+                              color: user.is_active ? "#3B6D11" : "#5F5E5A",
+                            }}>
+                              {user.is_active ? "active" : "inactive"}
+                            </span>
+                          </td>
+                          <td style={tdStyle}>
+                            <div className="flex flex-wrap gap-2">
+                              <Button type="button" variant="secondary" onClick={() => openViewModal(user)}>View</Button>
+                              <Button type="button" onClick={() => openEditModal(user)}>Edit</Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {!loading && filteredUsers.length > 0 && (
+        <Pagination
+          page={pagination.safePage}
+          totalPages={pagination.totalPages}
+          totalItems={filteredUsers.length}
+          start={pagination.start}
+          end={pagination.end}
+          onPageChange={setPage}
+        />
+      )}
+      
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Add User">
         <form onSubmit={handleCreateUser} className="space-y-3">
           <Input name="email" label="Email" value={createForm.email} onChange={onCreateChange} required />
@@ -338,6 +497,6 @@ export default function AdminUsers() {
           </div>
         </form>
       </Modal>
-    </PageContainer>
+    </section>
   );
 }

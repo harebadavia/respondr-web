@@ -5,6 +5,9 @@ import Card from "../components/ui/Card";
 import Alert from "../components/ui/Alert";
 import RolePageHeader from "../components/ui/RolePageHeader";
 import Button from "../components/ui/Button";
+import { ListToolbar, Pagination } from "../components/ui/ListControls";
+import { DATE_FILTER_OPTIONS, matchesDateFilter, paginateItems } from "../components/ui/listControlUtils";
+import { FaBell } from "react-icons/fa6";
 
 const TYPE_COLORS = {
   emergency: "bg-red-500",
@@ -27,6 +30,10 @@ export default function ResidentAlerts() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadAlerts = async (mode = "initial") => {
     if (mode === "initial") setLoading(true);
@@ -49,13 +56,27 @@ export default function ResidentAlerts() {
 
   const filteredAlerts = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return alerts;
-    return alerts.filter((item) =>
-      item.title?.toLowerCase().includes(q) ||
-      item.message?.toLowerCase().includes(q) ||
-      String(item.type || "").toLowerCase().includes(q)
-    );
-  }, [alerts, query]);
+    return alerts.filter((item) => {
+      const type = String(item.type || "").toLowerCase();
+      if (typeFilter !== "all" && type !== typeFilter) return false;
+      if (!matchesDateFilter(item.created_at, dateFilter)) return false;
+      if (!q) return true;
+      return item.title?.toLowerCase().includes(q) ||
+        item.message?.toLowerCase().includes(q) ||
+        type.includes(q);
+    });
+  }, [alerts, dateFilter, query, typeFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, typeFilter, dateFilter, pageSize]);
+
+  const alertTypeOptions = useMemo(() => {
+    const types = Array.from(new Set(alerts.map((item) => String(item.type || "").toLowerCase()).filter(Boolean))).sort();
+    return [{ value: "all", label: "All types" }, ...types.map((type) => ({ value: type, label: type }))];
+  }, [alerts]);
+
+  const pagination = paginateItems(filteredAlerts, page, pageSize);
 
   return (
     <section className="space-y-4">
@@ -63,6 +84,7 @@ export default function ResidentAlerts() {
         role="resident"
         title="Alerts"
         subtitle="Official barangay alert feed."
+        icon={FaBell}
         right={(
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-[#EAF3DE] px-2.5 py-1 text-xs font-bold text-[#3B6D11]">{alerts.length}</span>
@@ -73,15 +95,17 @@ export default function ResidentAlerts() {
         )}
       />
 
-      <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-tertiary)] bg-white px-4 py-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
-        <span className="text-[var(--color-text-tertiary)]">🔍</span>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search alerts"
-          className="border-0 p-0 text-sm focus:ring-0"
-        />
-      </div>
+      <ListToolbar
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Search alerts"
+        filters={[
+          { id: "type", label: "Type", value: typeFilter, onChange: setTypeFilter, options: alertTypeOptions },
+          { id: "date", label: "Date", value: dateFilter, onChange: setDateFilter, options: DATE_FILTER_OPTIONS },
+        ]}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
 
@@ -92,8 +116,8 @@ export default function ResidentAlerts() {
           <p className="text-neutral-600">No alerts yet.</p>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filteredAlerts.map((item) => {
+        <div className="space-y-4">
+          {pagination.pageItems.map((item) => {
             const toneKey = String(item.type || "").toLowerCase();
             const stripClass = TYPE_COLORS[toneKey] || "bg-neutral-400";
             const pillClass = TYPE_TEXT[toneKey] || "text-neutral-700 bg-neutral-100";
@@ -117,6 +141,17 @@ export default function ResidentAlerts() {
             );
           })}
         </div>
+      )}
+
+      {!loading && filteredAlerts.length > 0 && (
+        <Pagination
+          page={pagination.safePage}
+          totalPages={pagination.totalPages}
+          totalItems={filteredAlerts.length}
+          start={pagination.start}
+          end={pagination.end}
+          onPageChange={setPage}
+        />
       )}
     </section>
   );

@@ -6,9 +6,10 @@ import {
   FaHourglassHalf,
   FaCircleCheck,
   FaBell,
+  FaGaugeHigh,
 } from "react-icons/fa6";
-import PageContainer from "../components/ui/PageContainer";
 import { apiAuthRequest } from "../services/api";
+import RolePageHeader from "../components/ui/RolePageHeader";
 
 const STATUS_MAP = {
   pending: { bg: "#FAEEDA", text: "#854F0B", dot: "#EF9F27" },
@@ -74,34 +75,6 @@ function SectionLabel({ children }) {
   );
 }
 
-function DashboardHeader() {
-  const now = new Date();
-  const date = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-  const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-
-  return (
-    <div style={{ padding: "26px 32px 24px", borderBottom: "0.5px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", background: "var(--color-background-primary)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: "#EAF3DE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <FaFileLines style={{ fontSize: 18, color: "#3B6D11" }} />
-        </div>
-
-        <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--color-text-primary)", letterSpacing: "-0.025em", lineHeight: 1.25 }}>Resident Dashboard</h1>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", background: "#EAF3DE", color: "#3B6D11", padding: "2px 8px", borderRadius: 999, position: "relative", top: -1 }}>Resident</span>
-          </div>
-          <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-            Your reports, local alerts, and announcements in one place.
-          </p>
-        </div>
-      </div>
-
-      <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", flexShrink: 0, whiteSpace: "nowrap" }}>{date} · {time}</span>
-    </div>
-  );
-}
-
 function MetricCard({ label, value, subtext, shortcutLabel, onShortcut, index }) {
   const accent = METRIC_ACCENTS[index % METRIC_ACCENTS.length];
   const Icon = METRIC_ICONS[index % METRIC_ICONS.length];
@@ -142,13 +115,37 @@ function MetricCard({ label, value, subtext, shortcutLabel, onShortcut, index })
 }
 
 function Shell({ children }) {
+  const now = new Date();
+  const date = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
   return (
-    <PageContainer className="!max-w-none px-0 py-0">
-      <DashboardHeader />
-      <div style={{ background: "var(--color-background-tertiary)", minHeight: "calc(100vh - 97px)", padding: "28px 32px 48px" }}>
-        {children}
-      </div>
-    </PageContainer>
+    <section className="space-y-4">
+      <RolePageHeader
+        role="resident"
+        title="Dashboard"
+        subtitle="Your reports, local alerts, and announcements in one place."
+        icon={FaGaugeHigh}
+        right={(
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 16px", borderRadius: 999,
+            background: "var(--color-background-secondary, #F8FAFC)",
+            border: "1px solid var(--color-border-tertiary)",
+            color: "var(--color-text-secondary)", fontSize: 13, fontWeight: 500,
+            boxShadow: "inset 0 1px 2px rgba(0,0,0,0.02)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 8px rgba(16, 185, 129, 0.6)" }} />
+            </div>
+            <span style={{ color: "var(--color-text-primary)" }}>{date}</span>
+            <span style={{ opacity: 0.3 }}>|</span>
+            <span style={{ width: "65px", textAlign: "right" }}>{time}</span>
+          </div>
+        )}
+      />
+      <div>{children}</div>
+    </section>
   );
 }
 
@@ -226,14 +223,14 @@ export default function ResidentDashboard() {
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
         <div>
           <SectionLabel>Overview</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             {metrics.map((m, i) => <MetricCard key={m.label} {...m} index={i} />)}
           </div>
         </div>
 
         <div>
           <SectionLabel>Activity</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
             <div style={CARD_STYLE}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>My Recent Reports</p>

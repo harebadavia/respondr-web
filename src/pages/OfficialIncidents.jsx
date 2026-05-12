@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
+import { CircleMarker, MapContainer, TileLayer } from "react-leaflet";
+import { useSearchParams } from "react-router-dom";
 import { storage } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { apiAuthRequest } from "../services/api";
 import Modal from "../components/ui/Modal";
+import RolePageHeader from "../components/ui/RolePageHeader";
+import Button from "../components/ui/Button";
+import { ListToolbar, Pagination } from "../components/ui/ListControls";
+import { DATE_FILTER_OPTIONS, matchesDateFilter, paginateItems } from "../components/ui/listControlUtils";
+import { FaListCheck } from "react-icons/fa6";
 
 /* ─── Shared palette (mirrors AdminDashboard) ────────────────── */
 const STATUS_MAP = {
@@ -57,6 +64,11 @@ function formatDate(iso) {
   });
 }
 
+function toNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /* ─── Sub-components ─────────────────────────────────────────── */
 function StatusBadge({ status }) {
   const val = String(status || "").toLowerCase();
@@ -77,62 +89,27 @@ function StatusBadge({ status }) {
 }
 
 function ActionButton({ children, onClick, disabled, danger, small }) {
-  const [hover, setHover] = useState(false);
-  const base = {
-    display: "inline-flex", alignItems: "center", justifyContent: "center",
-    padding: small ? "5px 12px" : "7px 16px",
-    borderRadius: 8,
-    fontSize: small ? 12 : 13,
-    fontWeight: 500,
-    cursor: disabled ? "not-allowed" : "pointer",
-    border: "0.5px solid",
-    transition: "all 0.12s",
-    opacity: disabled ? 0.55 : 1,
-    letterSpacing: "0.01em",
-    whiteSpace: "nowrap",
-  };
-  const style = danger
-    ? { ...base, background: hover ? "#FCEBEB" : "transparent", borderColor: "#F09595", color: "#A32D2D" }
-    : { ...base, background: hover ? "var(--color-background-secondary)" : "transparent", borderColor: "var(--color-border-secondary)", color: "var(--color-text-primary)" };
-
   return (
-    <button
-      type="button"
+    <Button
       onClick={onClick}
       disabled={disabled}
-      style={style}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      variant={danger ? "danger" : "secondary"}
+      className={small ? "h-7 px-2 text-[11px]" : undefined}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
 function PrimaryButton({ children, onClick, disabled, type = "button" }) {
-  const [hover, setHover] = useState(false);
   return (
-    <button
+    <Button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      style={{
-        display: "inline-flex", alignItems: "center",
-        padding: "7px 18px", borderRadius: 8,
-        fontSize: 13, fontWeight: 500,
-        cursor: disabled ? "not-allowed" : "pointer",
-        border: "none",
-        background: hover ? "#0C447C" : "#185FA5",
-        color: "#fff",
-        transition: "background 0.12s",
-        opacity: disabled ? 0.6 : 1,
-        letterSpacing: "0.01em",
-      }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -154,151 +131,44 @@ function InlineAlert({ children, tone }) {
 /* ─── Page header ────────────────────────────────────────────── */
 function PageHeader({ onRefresh, refreshing }) {
   return (
-    <div style={{
-      padding: "26px 32px 24px",
-      borderBottom: "0.5px solid var(--color-border-tertiary)",
-      display: "flex", alignItems: "center",
-      justifyContent: "space-between",
-      gap: 16, flexWrap: "wrap",
-      background: "var(--color-background-primary)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        {/* Clipboard icon badge */}
-        <div style={{
-          width: 44, height: 44, borderRadius: 12,
-          background: "#E6F1FB",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-        }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="5" y="3" width="14" height="18" rx="2" fill="#378ADD" opacity="0.25" />
-            <rect x="5" y="3" width="14" height="18" rx="2" stroke="#378ADD" strokeWidth="1.5" />
-            <path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z" fill="#378ADD" />
-            <path d="M9 10h6M9 14h4" stroke="#185FA5" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-        </div>
-
-        <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <h1 style={{
-              margin: 0, fontSize: 20, fontWeight: 600,
-              color: "var(--color-text-primary)",
-              letterSpacing: "-0.025em", lineHeight: 1.25,
-            }}>
-              Incident Queue
-            </h1>
-            <span style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
-              textTransform: "uppercase",
-              background: "#E6F1FB", color: "#185FA5",
-              padding: "2px 8px", borderRadius: 999,
-              position: "relative", top: -1,
-            }}>
-              Official
-            </span>
-          </div>
-          <p style={{
-            margin: "3px 0 0", fontSize: 13,
-            color: "var(--color-text-secondary)", lineHeight: 1.5,
-          }}>
-            Review reports, update statuses, and post barangay responses.
-          </p>
-        </div>
-      </div>
-
-      <ActionButton onClick={onRefresh} disabled={refreshing}>
-        {refreshing ? (
-          <>
-            <svg width="13" height="13" viewBox="0 0 24 24" style={{ marginRight: 6, animation: "spin 0.8s linear infinite" }}>
-              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-              <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40 20" />
-            </svg>
-            Refreshing…
-          </>
-        ) : (
-          <>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
-              <path d="M4 12a8 8 0 1 1 1.5 4.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path d="M4 17v-5h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Refresh
-          </>
-        )}
-      </ActionButton>
-    </div>
+    <RolePageHeader
+      title="Incident Queue"
+      subtitle="Review reports, update statuses, and post barangay responses."
+      role="official"
+      icon={FaListCheck}
+      right={(
+        <ActionButton onClick={onRefresh} disabled={refreshing}>
+          {refreshing ? (
+            <>
+              Refreshing...
+            </>
+          ) : "Refresh"}
+        </ActionButton>
+      )}
+    />
   );
 }
 
 /* ─── Filter bar ─────────────────────────────────────────────── */
-function FilterBar({ statusFilter, setStatusFilter, searchTerm, setSearchTerm }) {
+function FilterBar({ statusFilter, setStatusFilter, searchTerm, setSearchTerm, dateFilter, setDateFilter, pageSize, setPageSize }) {
   return (
-    <div style={{
-      ...SURFACE_CARD_STYLE,
-      borderRadius: 16,
-      padding: "16px 20px",
-      display: "flex",
-      gap: 12,
-      flexWrap: "wrap",
-      alignItems: "flex-end",
-    }}>
-      {/* Status select */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 180 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-          Status
-        </label>
-        <div style={{ position: "relative" }}>
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            style={{
-              width: "100%", padding: "7px 32px 7px 11px",
-              fontSize: 13, color: "var(--color-text-primary)",
-              background: "var(--color-background-secondary)",
-              border: "0.5px solid var(--color-border-secondary)",
-              borderRadius: 8, appearance: "none", cursor: "pointer",
-              outline: "none",
-            }}
-          >
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s}>
-                {s === "all" ? "All statuses" : s.replace("_", " ")}
-              </option>
-            ))}
-          </select>
-          {/* chevron */}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--color-text-tertiary)" }}>
-            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1, minWidth: 220 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-          Search
-        </label>
-        <div style={{ position: "relative" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-tertiary)", pointerEvents: "none" }}>
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-            <path d="M16.5 16.5l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search title, category, description, reporter…"
-            style={{
-              width: "100%", padding: "7px 11px 7px 32px",
-              fontSize: 13, color: "var(--color-text-primary)",
-              background: "var(--color-background-secondary)",
-              border: "0.5px solid var(--color-border-secondary)",
-              borderRadius: 8, outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-      </div>
-    </div>
+    <ListToolbar
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+      searchPlaceholder="Search title, category, description, reporter..."
+      filters={[
+        {
+          id: "status",
+          label: "Status",
+          value: statusFilter,
+          onChange: setStatusFilter,
+          options: STATUS_OPTIONS.map((s) => ({ value: s, label: s === "all" ? "All statuses" : s.replace("_", " ") })),
+        },
+        { id: "date", label: "Date", value: dateFilter, onChange: setDateFilter, options: DATE_FILTER_OPTIONS },
+      ]}
+      pageSize={pageSize}
+      onPageSizeChange={setPageSize}
+    />
   );
 }
 
@@ -453,6 +323,8 @@ function ModalSection({ title, children }) {
 /* ─── Main component ─────────────────────────────────────────── */
 export default function OfficialIncidents() {
   const { isAuthenticated } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedIncidentId = searchParams.get("incident");
 
   const [incidents, setIncidents] = useState([]);
   const [loadingIncidents, setLoadingIncidents] = useState(true);
@@ -460,6 +332,9 @@ export default function OfficialIncidents() {
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
@@ -498,6 +373,7 @@ export default function OfficialIncidents() {
     const term = searchTerm.trim().toLowerCase();
     return incidents.filter(incident => {
       if (statusFilter !== "all" && incident.status !== statusFilter) return false;
+      if (!matchesDateFilter(incident.created_at, dateFilter)) return false;
       if (!term) return true;
       return [
         incident.title, incident.description,
@@ -505,7 +381,13 @@ export default function OfficialIncidents() {
         incident.reported_by_first_name, incident.reported_by_last_name,
       ].filter(Boolean).join(" ").toLowerCase().includes(term);
     });
-  }, [incidents, statusFilter, searchTerm]);
+  }, [incidents, dateFilter, statusFilter, searchTerm]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, dateFilter, pageSize]);
+
+  const pagination = paginateItems(visibleIncidents, page, pageSize);
 
   const mergeIncidentIntoQueue = updatedIncident => {
     if (!updatedIncident?.id) return;
@@ -540,6 +422,16 @@ export default function OfficialIncidents() {
       setDetailLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isAuthenticated || !requestedIncidentId) return;
+    openDetailModal(requestedIncidentId);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("incident");
+      return next;
+    }, { replace: true });
+  }, [isAuthenticated, requestedIncidentId, setSearchParams]);
 
   const refreshIncidentDetail = async incidentId => {
     const data = await apiAuthRequest(`/incidents/${incidentId}`);
@@ -638,7 +530,7 @@ export default function OfficialIncidents() {
     }
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {visibleIncidents.map(incident => (
+        {pagination.pageItems.map(incident => (
           <IncidentCard key={incident.id} incident={incident} onOpen={openDetailModal} />
         ))}
       </div>
@@ -647,28 +539,40 @@ export default function OfficialIncidents() {
 
   return (
     <>
-      {/* ── Page wrapper (mirrors AdminDashboard Shell) ── */}
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <section className="space-y-4">
         <PageHeader onRefresh={loadIncidents} refreshing={loadingIncidents} />
 
         <div style={{
           background: "var(--color-background-tertiary)",
-          flex: 1,
-          padding: "28px 32px 48px",
           display: "flex", flexDirection: "column", gap: 16,
+          borderRadius: 16,
         }}>
           <FilterBar
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            dateFilter={dateFilter}
+            setDateFilter={setDateFilter}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
           />
 
           {incidentsError && <InlineAlert tone="error">{incidentsError}</InlineAlert>}
 
           {bodyContent()}
+          {!loadingIncidents && visibleIncidents.length > 0 && (
+            <Pagination
+              page={pagination.safePage}
+              totalPages={pagination.totalPages}
+              totalItems={visibleIncidents.length}
+              start={pagination.start}
+              end={pagination.end}
+              onPageChange={setPage}
+            />
+          )}
         </div>
-      </div>
+      </section>
 
       {/* ── Detail modal ── */}
       <Modal
@@ -709,10 +613,37 @@ export default function OfficialIncidents() {
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <DetailRow label="Reported by"  value={formatReporterName(selectedIncident)} />
                 <DetailRow label="Category"     value={formatCategoryHierarchy(selectedIncident)} />
-                <DetailRow label="Coordinates"  value={`${selectedIncident.latitude}, ${selectedIncident.longitude}`} />
                 <DetailRow label="Submitted"    value={formatDate(selectedIncident.created_at)} />
                 <DetailRow label="ID"           value={selectedIncident.id} />
               </div>
+
+              {toNumber(selectedIncident.latitude) !== null && toNumber(selectedIncident.longitude) !== null ? (
+                <div
+                  style={{
+                    marginTop: 12,
+                    border: "0.5px solid var(--color-border-tertiary)",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                  }}
+                >
+                  <MapContainer
+                    center={[toNumber(selectedIncident.latitude), toNumber(selectedIncident.longitude)]}
+                    zoom={16}
+                    style={{ width: "100%", height: 220 }}
+                    scrollWheelZoom
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <CircleMarker
+                      center={[toNumber(selectedIncident.latitude), toNumber(selectedIncident.longitude)]}
+                      radius={8}
+                      pathOptions={{ color: "#185FA5", fillColor: "#378ADD", fillOpacity: 0.9, weight: 2 }}
+                    />
+                  </MapContainer>
+                </div>
+              ) : null}
             </ModalSection>
 
             {/* Attachment */}

@@ -10,6 +10,15 @@ import Input from "../components/ui/Input";
 import Alert from "../components/ui/Alert";
 import PageContainer from "../components/ui/PageContainer";
 
+function normalizePhilippineMobileNumber(value) {
+  const digitsOnly = String(value || "").replace(/\D/g, "");
+  if (!digitsOnly) return "";
+  if (digitsOnly.startsWith("63") && digitsOnly.length === 12) return `+${digitsOnly}`;
+  if (digitsOnly.startsWith("0") && digitsOnly.length === 11) return `+63${digitsOnly.slice(1)}`;
+  if (digitsOnly.startsWith("9") && digitsOnly.length === 10) return `+63${digitsOnly}`;
+  return null;
+}
+
 export default function Register() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -38,6 +47,11 @@ export default function Register() {
     setSubmitting(true);
 
     try {
+      const normalizedPhoneNumber = normalizePhilippineMobileNumber(form.phone_number);
+      if (normalizedPhoneNumber === null) {
+        throw new Error("Phone number must be a valid Philippine mobile number.");
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       const firebaseUser = userCredential.user;
       const token = await firebaseUser.getIdToken();
@@ -49,7 +63,7 @@ export default function Register() {
           email: firebaseUser.email,
           first_name: form.first_name.trim(),
           last_name: form.last_name.trim(),
-          phone_number: form.phone_number.trim() || null,
+          phone_number: normalizedPhoneNumber || null,
         }),
       });
 
