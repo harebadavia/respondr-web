@@ -1,10 +1,11 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { FaGaugeHigh, FaListCheck, FaUsersGear } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
+import { apiAuthRequest } from "../services/api";
 import AppShell from "./AppShell";
 
 export default function AdminLayout() {
-  const { backendUser, logout } = useAuth();
+  const { backendUser, logout, updateBackendUser } = useAuth();
   const navigate = useNavigate();
 
   const modules = [
@@ -18,6 +19,11 @@ export default function AdminLayout() {
     navigate("/");
   };
 
+  const handleQuickstartComplete = async () => {
+    const data = await apiAuthRequest("/auth/quickstart", { method: "PATCH" });
+    updateBackendUser({ quickstart_completed_at: data.quickstart_completed_at });
+  };
+
   return (
     <AppShell
       title="Admin"
@@ -27,6 +33,9 @@ export default function AdminLayout() {
       profileTo="/admin/profile"
       modules={modules}
       onLogout={handleLogout}
+      quickstartCompletedAt={backendUser?.quickstart_completed_at}
+      onQuickstartComplete={handleQuickstartComplete}
+      quickstartRole="official"
     >
       <Outlet />
     </AppShell>

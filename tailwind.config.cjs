@@ -1,4 +1,11 @@
-const sharedPreset = require('../respondr-design-tokens/web-tailwind-preset.cjs');
+let sharedPreset;
+
+try {
+  sharedPreset = require('../respondr-design-tokens/web-tailwind-preset.cjs');
+} catch (err) {
+  if (err.code !== 'MODULE_NOT_FOUND') throw err;
+  sharedPreset = require('../respondr-design-tokens/respondr-design-tokens/web-tailwind-preset.cjs');
+}
 
 module.exports = {
   presets: [sharedPreset],

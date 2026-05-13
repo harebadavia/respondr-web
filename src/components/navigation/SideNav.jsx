@@ -1,4 +1,4 @@
-import { FaAnglesLeft, FaAnglesRight, FaRightFromBracket } from "react-icons/fa6";
+import { FaAnglesLeft, FaAnglesRight, FaCircleQuestion, FaRightFromBracket } from "react-icons/fa6";
 import { Link } from "react-router-dom";
 import ModuleNavItem from "./ModuleNavItem";
 
@@ -10,6 +10,7 @@ export default function SideNav({
   email,
   profileTo,
   onLogout,
+  onOpenQuickstart,
   mobile = false,
   onNavigate,
 }) {
@@ -99,6 +100,20 @@ export default function SideNav({
       </nav>
 
       <div className="border-t border-neutral-200 px-2 py-3">
+        {onOpenQuickstart ? (
+          <button
+            type="button"
+            onClick={() => {
+              onOpenQuickstart();
+              onNavigate?.();
+            }}
+            className={`mb-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-transparent bg-[var(--color-background-secondary)] px-3 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-brand-50 hover:text-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 ${collapsed ? "w-full px-2" : "w-full"}`}
+            title={collapsed ? "Quickstart" : undefined}
+          >
+            <FaCircleQuestion className="text-sm" />
+            {!collapsed && <span>Quickstart</span>}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onLogout}
