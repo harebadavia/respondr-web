@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaBars } from "react-icons/fa";
 import SideNav from "../components/navigation/SideNav";
+import QuickstartModal from "../components/quickstart/QuickstartModal";
 
 const SIDENAV_STORAGE_KEY = "respondr.sidenav.collapsed";
+const QUICKSTART_AUTO_ROLES = new Set(["resident", "official"]);
 
 function readPersistedCollapsed() {
   if (typeof window === "undefined") return false;
@@ -10,9 +12,26 @@ function readPersistedCollapsed() {
   return stored === "true";
 }
 
-export default function AppShell({ role, userFirstName, userEmail, profileTo, modules, onLogout, children }) {
+export default function AppShell({
+  role,
+  userFirstName,
+  userEmail,
+  profileTo,
+  modules,
+  onLogout,
+  quickstartCompletedAt,
+  onQuickstartComplete,
+  quickstartRole,
+  children,
+}) {
   const [collapsed, setCollapsed] = useState(readPersistedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [quickstartOpen, setQuickstartOpen] = useState(false);
+  const [quickstartSource, setQuickstartSource] = useState("manual");
+  const [completedForUserEmail, setCompletedForUserEmail] = useState(null);
+  const normalizedRole = String(quickstartRole || role || "resident").toLowerCase();
+  const accountRole = String(role || "").toLowerCase();
+  const quickstartCompleted = Boolean(quickstartCompletedAt || (userEmail && completedForUserEmail === userEmail));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -28,10 +47,53 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
     };
   }, [mobileOpen]);
 
+  useEffect(() => {
+    if (!QUICKSTART_AUTO_ROLES.has(accountRole)) return;
+    if (quickstartCompleted || quickstartOpen) return;
+
+    const timer = window.setTimeout(() => {
+      setQuickstartSource("auto");
+      setQuickstartOpen(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [accountRole, quickstartCompleted, quickstartOpen]);
+
   const desktopSidebarWidth = useMemo(
     () => (collapsed ? "md:w-[84px]" : "md:w-[300px]"),
     [collapsed]
   );
+
+  const openQuickstart = () => {
+    setQuickstartSource("manual");
+    setQuickstartOpen(true);
+  };
+
+  const closeQuickstart = async () => {
+    setQuickstartOpen(false);
+
+    if (quickstartSource !== "auto" || quickstartCompleted) return;
+
+    setCompletedForUserEmail(userEmail || null);
+    try {
+      await onQuickstartComplete?.();
+    } catch (err) {
+      console.warn("Quickstart completion failed:", err?.message || err);
+    }
+  };
+
+  const completeQuickstart = async () => {
+    setQuickstartOpen(false);
+
+    if (quickstartCompleted) return;
+
+    setCompletedForUserEmail(userEmail || null);
+    try {
+      await onQuickstartComplete?.();
+    } catch (err) {
+      console.warn("Quickstart completion failed:", err?.message || err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--color-background-tertiary)] text-neutral-900">
@@ -47,6 +109,7 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
             email={userEmail}
             profileTo={profileTo}
             onLogout={onLogout}
+            onOpenQuickstart={openQuickstart}
             onNavigate={() => {}}
           />
         </aside>
@@ -65,6 +128,7 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
                 email={userEmail}
                 profileTo={profileTo}
                 onLogout={onLogout}
+                onOpenQuickstart={openQuickstart}
                 mobile
                 onNavigate={() => setMobileOpen(false)}
               />
@@ -88,6 +152,13 @@ export default function AppShell({ role, userFirstName, userEmail, profileTo, mo
           </main>
         </div>
       </div>
+      <QuickstartModal
+        key={`${normalizedRole}-${quickstartSource}-${quickstartOpen ? "open" : "closed"}`}
+        open={quickstartOpen}
+        role={normalizedRole}
+        onClose={closeQuickstart}
+        onComplete={completeQuickstart}
+      />
     </div>
   );
 }

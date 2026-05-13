@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../firebase";
@@ -57,6 +58,10 @@ export function AuthProvider({ children }) {
     });
   };
 
+  const updateBackendUser = (updates) => {
+    setBackendUser((current) => (current ? { ...current, ...updates } : current));
+  };
+
   const logout = async () => {
     await unregisterStoredPushToken();
 
@@ -74,6 +79,7 @@ export function AuthProvider({ children }) {
         token,
         login,
         logout,
+        updateBackendUser,
         isAuthenticated: !!backendUser,
         loading,
       }}
