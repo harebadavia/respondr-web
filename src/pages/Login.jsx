@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { apiAuthRequest } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +9,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -16,6 +17,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setWarning("");
     setLoading(true);
 
     try {
@@ -30,7 +32,13 @@ export default function Login() {
       else navigate("/resident/dashboard");
     } catch (err) {
       console.error(err);
-      setError("Invalid email or password.");
+      const message = String(err?.message || "").toLowerCase();
+      if (message.includes("inactive")) {
+        await signOut(auth).catch(() => {});
+        setWarning("Your account is inactive. Please wait for administrator approval or contact support.");
+      } else {
+        setError("Invalid email or password.");
+      }
     } finally {
       setLoading(false);
     }
@@ -156,6 +164,13 @@ export default function Login() {
                 <div className="bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] text-xs rounded-lg px-4 py-2.5"
                      style={{ fontFamily: "'DM Mono', monospace" }}>
                   {error}
+                </div>
+              )}
+
+              {warning && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg px-4 py-2.5"
+                     style={{ fontFamily: "'DM Mono', monospace" }}>
+                  {warning}
                 </div>
               )}
             </form>
