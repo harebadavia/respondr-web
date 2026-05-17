@@ -21,6 +21,7 @@ import OfficialAlerts from "./pages/OfficialAlerts";
 import OfficialAnnouncements from "./pages/OfficialAnnouncements";
 import OfficialSmsLogs from "./pages/OfficialSmsLogs";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminDevices from "./pages/AdminDevices";
 import AdminUsers from "./pages/AdminUsers";
 import Profile from "./pages/Profile";
 
@@ -95,6 +96,7 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="devices" element={<AdminDevices />} />
           <Route path="profile" element={<Profile />} />
         </Route>
 

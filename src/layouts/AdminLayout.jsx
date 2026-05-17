@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { FaGaugeHigh, FaListCheck, FaUsersGear } from "react-icons/fa6";
+import { FaGaugeHigh, FaListCheck, FaMobileScreenButton, FaUsersGear } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import { apiAuthRequest } from "../services/api";
 import AppShell from "./AppShell";
@@ -11,6 +11,7 @@ export default function AdminLayout() {
   const modules = [
     { label: "Dashboard", to: "/admin/dashboard", icon: FaGaugeHigh },
     { label: "Users", to: "/admin/users", icon: FaUsersGear },
+    { label: "Devices", to: "/admin/devices", icon: FaMobileScreenButton },
     { label: "Official View", to: "/official/dashboard", icon: FaListCheck },
   ];
 
