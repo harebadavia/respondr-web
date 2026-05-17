@@ -49,7 +49,7 @@ export async function ensurePushRegistration() {
 
   await apiAuthRequest("/devices/register", {
     method: "POST",
-    body: JSON.stringify({ fcm_token: fcmToken }),
+    body: JSON.stringify({ fcm_token: fcmToken, platform: "web" }),
   });
 
   await setStoredToken(fcmToken);
