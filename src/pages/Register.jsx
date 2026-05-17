@@ -92,9 +92,13 @@ export default function Register() {
       const normalizedPhoneNumber = normalizePhilippineMobileNumber(form.phone_number);
       const userCredential = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
       const firebaseUser = userCredential.user;
+      const idToken = await firebaseUser.getIdToken();
 
       await apiRequest("/auth/register", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
           firebase_uid: firebaseUser.uid,
           email: firebaseUser.email,
