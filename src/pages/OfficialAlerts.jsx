@@ -53,6 +53,10 @@ export default function OfficialAlerts() {
   const [message, setMessage] = useState("");
   const [pushSummary, setPushSummary] = useState(null);
   const [smsSummary, setSmsSummary] = useState(null);
+  const [smsRecipients, setSmsRecipients] = useState([]);
+  const [smsRecipientsLoading, setSmsRecipientsLoading] = useState(false);
+  const [smsRecipientSearch, setSmsRecipientSearch] = useState("");
+  const [selectedSmsRecipientIds, setSelectedSmsRecipientIds] = useState([]);
 
   const loadAlerts = async () => {
     setLoading(true);
@@ -68,10 +72,29 @@ export default function OfficialAlerts() {
     }
   };
 
+  const loadSmsRecipients = async () => {
+    setSmsRecipientsLoading(true);
+    setError("");
+
+    try {
+      const data = await apiAuthRequest("/alerts/sms-recipients");
+      setSmsRecipients(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message || "Failed to load SMS recipients");
+    } finally {
+      setSmsRecipientsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
     loadAlerts();
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!createOpen || form.send_sms !== "true" || smsRecipients.length > 0 || smsRecipientsLoading) return;
+    loadSmsRecipients();
+  }, [createOpen, form.send_sms, smsRecipients.length, smsRecipientsLoading]);
 
   const filteredAlerts = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -98,12 +121,56 @@ export default function OfficialAlerts() {
   }, [alerts]);
 
   const pagination = paginateItems(filteredAlerts, page, pageSize);
+  const smsReachableRecipients = useMemo(
+    () => smsRecipients.filter((recipient) => recipient.sms_reachable),
+    [smsRecipients]
+  );
+  const filteredSmsRecipients = useMemo(() => {
+    const query = smsRecipientSearch.trim().toLowerCase();
+    if (!query) return smsReachableRecipients;
+
+    return smsReachableRecipients.filter((recipient) => [
+      recipient.first_name,
+      recipient.last_name,
+      recipient.phone_number,
+      recipient.normalized_phone_number,
+    ].join(" ").toLowerCase().includes(query));
+  }, [smsReachableRecipients, smsRecipientSearch]);
 
   const onChange = (event) => {
     setForm((prev) => ({
       ...prev,
       [event.target.name]: event.target.value,
     }));
+
+    if (event.target.name === "send_sms" && event.target.value !== "true") {
+      setSelectedSmsRecipientIds([]);
+      setSmsRecipientSearch("");
+    }
+  };
+
+  const toggleSmsRecipient = (recipientId) => {
+    setSelectedSmsRecipientIds((prev) => (
+      prev.includes(recipientId)
+        ? prev.filter((id) => id !== recipientId)
+        : [...prev, recipientId]
+    ));
+  };
+
+  const selectAllFilteredSmsRecipients = () => {
+    setSelectedSmsRecipientIds((prev) => Array.from(new Set([
+      ...prev,
+      ...filteredSmsRecipients.map((recipient) => recipient.id),
+    ])));
+  };
+
+  const clearSmsRecipients = () => {
+    setSelectedSmsRecipientIds([]);
+  };
+
+  const closeCreateModal = () => {
+    setCreateOpen(false);
+    setSmsRecipientSearch("");
   };
 
   const handleSubmit = async (event) => {
@@ -127,6 +194,13 @@ export default function OfficialAlerts() {
         throw new Error("Title and message are required.");
       }
 
+      if (payload.send_sms) {
+        if (selectedSmsRecipientIds.length === 0) {
+          throw new Error("Select at least one SMS recipient.");
+        }
+        payload.sms_recipient_user_ids = selectedSmsRecipientIds;
+      }
+
       const created = await apiAuthRequest("/alerts", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -137,6 +211,8 @@ export default function OfficialAlerts() {
       setSmsSummary(created.sms_summary || null);
       setForm(INITIAL_FORM);
       setCreateOpen(false);
+      setSelectedSmsRecipientIds([]);
+      setSmsRecipientSearch("");
       await loadAlerts();
     } catch (err) {
       setError(err.message || "Failed to send alert");
@@ -220,7 +296,7 @@ export default function OfficialAlerts() {
         />
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Alert">
+      <Modal open={createOpen} onClose={closeCreateModal} title="Create Alert">
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input name="title" label="Title" value={form.title} onChange={onChange} required />
           <Textarea name="message" label="Message" rows={4} value={form.message} onChange={onChange} required />
@@ -252,9 +328,84 @@ export default function OfficialAlerts() {
             </div>
           </div>
 
+          {form.send_sms === "true" && (
+            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900">SMS recipients</p>
+                  <p className="text-xs text-neutral-600">
+                    {selectedSmsRecipientIds.length} selected from {smsReachableRecipients.length} reachable numbers
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={filteredSmsRecipients.length === 0}
+                    onClick={selectAllFilteredSmsRecipients}
+                  >
+                    Select visible
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={selectedSmsRecipientIds.length === 0}
+                    onClick={clearSmsRecipients}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <Input
+                  label="Search recipients"
+                  value={smsRecipientSearch}
+                  onChange={(event) => setSmsRecipientSearch(event.target.value)}
+                  placeholder="Name or phone number"
+                />
+              </div>
+
+              <div className="mt-3 max-h-56 overflow-y-auto rounded-md border border-neutral-200 bg-white">
+                {smsRecipientsLoading ? (
+                  <p className="p-3 text-sm text-neutral-600">Loading recipients...</p>
+                ) : smsReachableRecipients.length === 0 ? (
+                  <p className="p-3 text-sm text-neutral-600">No reachable resident phone numbers found.</p>
+                ) : filteredSmsRecipients.length === 0 ? (
+                  <p className="p-3 text-sm text-neutral-600">No recipients match your search.</p>
+                ) : (
+                  filteredSmsRecipients.map((recipient) => {
+                    const checked = selectedSmsRecipientIds.includes(recipient.id);
+                    return (
+                      <label
+                        key={recipient.id}
+                        className="flex cursor-pointer items-center gap-3 border-b border-neutral-100 px-3 py-2 last:border-b-0 hover:bg-neutral-50"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-neutral-300"
+                          checked={checked}
+                          onChange={() => toggleSmsRecipient(recipient.id)}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-neutral-900">
+                            {recipient.first_name} {recipient.last_name}
+                          </span>
+                          <span className="block text-xs text-neutral-600">
+                            {recipient.normalized_phone_number || recipient.phone_number}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button type="submit" disabled={submitting}>{submitting ? "Sending..." : "Send Alert"}</Button>
-            <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button type="button" variant="secondary" onClick={closeCreateModal}>Cancel</Button>
           </div>
         </form>
       </Modal>

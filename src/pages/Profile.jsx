@@ -7,12 +7,13 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { auth } from "../firebase";
 import { apiAuthRequest } from "../services/api";
+import { ensurePushRegistration } from "../services/pushMessaging";
 import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import RolePageHeader from "../components/ui/RolePageHeader";
-import { FaUser } from "react-icons/fa6";
+import { FaBell, FaUser } from "react-icons/fa6";
 
 export default function Profile() {
   const { backendUser, updateBackendUser } = useAuth();
@@ -32,6 +33,9 @@ export default function Profile() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordMessage, setPasswordMessage] = useState("");
+  const [notificationSaving, setNotificationSaving] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   useEffect(() => {
     setProfileForm({
@@ -144,6 +148,26 @@ export default function Profile() {
       }
     } finally {
       setPasswordSaving(false);
+    }
+  };
+
+  const registerNotifications = async () => {
+    setNotificationError("");
+    setNotificationMessage("");
+    setNotificationSaving(true);
+
+    try {
+      const token = await ensurePushRegistration();
+      if (!token) {
+        setNotificationError("Notifications were not enabled. Check browser permissions and try again.");
+        return;
+      }
+
+      setNotificationMessage("This device is registered for alert notifications.");
+    } catch (err) {
+      setNotificationError(err.message || "Failed to register this device for notifications.");
+    } finally {
+      setNotificationSaving(false);
     }
   };
 
@@ -271,6 +295,29 @@ export default function Profile() {
               </Button>
             </div>
           </form>
+        </Card>
+
+        <Card>
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <FaBell className="text-brand-700" />
+                <h2 className="text-base font-semibold text-neutral-900">Notifications</h2>
+              </div>
+              <p className="mt-1 text-sm text-neutral-600">
+                Allow this device to receive barangay alert notifications.
+              </p>
+            </div>
+
+            {notificationError && <Alert tone="error">{notificationError}</Alert>}
+            {notificationMessage && <Alert tone="success">{notificationMessage}</Alert>}
+
+            <div className="flex justify-end">
+              <Button type="button" onClick={registerNotifications} disabled={notificationSaving}>
+                {notificationSaving ? "Registering..." : "Allow notifications"}
+              </Button>
+            </div>
+          </div>
         </Card>
       </div>
     </section>
