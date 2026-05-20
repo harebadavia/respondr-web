@@ -450,7 +450,7 @@ export default function OfficialDashboard() {
       try {
         setLoading(true);
         setError("");
-        const payload = await apiAuthRequest(`/dashboard?range=${analyticsRange}`);
+        const payload = await apiAuthRequest(`/dashboard?view=official&range=${analyticsRange}`);
         if (mounted) setData(payload);
       } catch (err) {
         if (mounted) setError(err.message || "Failed to load dashboard");
