@@ -6,6 +6,8 @@ import {
   FaClockRotateLeft,
   FaListCheck,
   FaCircleCheck,
+  FaChartLine,
+  FaLocationDot,
 } from "react-icons/fa6";
 import { apiAuthRequest } from "../services/api";
 
@@ -23,6 +25,12 @@ const METRIC_ACCENTS = [
   { light: "#FAEEDA", mid: "#EF9F27", dark: "#854F0B" },
   { light: "#EEEDFE", mid: "#7F77DD", dark: "#534AB7" },
   { light: "#EAF3DE", mid: "#639922", dark: "#3B6D11" },
+];
+
+const RANGE_OPTIONS = [
+  { key: "7d", label: "7 days" },
+  { key: "30d", label: "30 days" },
+  { key: "90d", label: "90 days" },
 ];
 
 const CARD_STYLE = {
@@ -253,6 +261,169 @@ function MetricCard({ label, value, subtext, shortcutLabel, onShortcut, index })
   );
 }
 
+function EmptyState({ children = "No analytics data for this range." }) {
+  return (
+    <div style={{ minHeight: 116, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-tertiary)", fontSize: 13, textAlign: "center", background: "#F8FAFC", border: "1px dashed #D9E2EC", borderRadius: 12, padding: 16 }}>
+      {children}
+    </div>
+  );
+}
+
+function formatHours(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "No data";
+  const numeric = Number(value);
+  if (numeric < 1) return `${Math.round(numeric * 60)} min`;
+  return `${numeric.toFixed(numeric >= 10 ? 0 : 1)} hrs`;
+}
+
+function TrendChart({ items }) {
+  const data = Array.isArray(items) ? items : [];
+  const hasData = data.some((item) => (item.reported || 0) > 0 || (item.resolved || 0) > 0);
+  if (!hasData) return <EmptyState>No incident activity recorded in this range.</EmptyState>;
+
+  const width = 520;
+  const height = 180;
+  const pad = 24;
+  const chartWidth = width - pad * 2;
+  const chartHeight = height - pad * 2;
+  const maxValue = Math.max(1, ...data.map((item) => Math.max(item.reported || 0, item.resolved || 0)));
+  const step = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth;
+  const barWidth = Math.max(3, Math.min(14, chartWidth / data.length - 4));
+  const yFor = (value) => pad + chartHeight - ((value || 0) / maxValue) * chartHeight;
+  const resolvedLine = data.map((item, index) => `${pad + index * step},${yFor(item.resolved)}`).join(" ");
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily reported and resolved incident trend" style={{ width: "100%", height: 190, display: "block" }}>
+        {[0, 0.5, 1].map((ratio) => (
+          <line key={ratio} x1={pad} x2={width - pad} y1={pad + chartHeight * ratio} y2={pad + chartHeight * ratio} stroke="#E6EDF5" strokeWidth="1" />
+        ))}
+        {data.map((item, index) => {
+          const x = pad + index * step - barWidth / 2;
+          const y = yFor(item.reported);
+          return (
+            <rect key={item.date} x={x} y={y} width={barWidth} height={pad + chartHeight - y} rx="3" fill="#378ADD" opacity="0.72">
+              <title>{`${item.date}: ${item.reported || 0} reported, ${item.resolved || 0} resolved`}</title>
+            </rect>
+          );
+        })}
+        <polyline points={resolvedLine} fill="none" stroke="#639922" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+        {data.map((item, index) => (
+          <circle key={`${item.date}-resolved`} cx={pad + index * step} cy={yFor(item.resolved)} r="3" fill="#639922">
+            <title>{`${item.date}: ${item.resolved || 0} resolved`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: "var(--color-text-secondary)" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: "#378ADD" }} />Reported</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 18, height: 3, borderRadius: 99, background: "#639922" }} />Resolved</span>
+      </div>
+    </div>
+  );
+}
+
+function StatusBreakdown({ items }) {
+  const data = Array.isArray(items) ? items : [];
+  const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
+  if (!total) return <EmptyState>No incident statuses to summarize yet.</EmptyState>;
+
+  return (
+    <div>
+      <div style={{ display: "flex", height: 16, borderRadius: 999, overflow: "hidden", background: "#F1EFE8", marginBottom: 14 }}>
+        {data.map((item) => {
+          const colors = STATUS_MAP[item.status] || { dot: "#888780" };
+          return <div key={item.status} title={`${item.status}: ${item.total}`} style={{ width: `${Math.max(2, item.percentage || 0)}%`, background: colors.dot }} />;
+        })}
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        {data.map((item) => {
+          const colors = STATUS_MAP[item.status] || { bg: "#F1EFE8", text: "#5F5E5A", dot: "#888780" };
+          return (
+            <div key={item.status} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0, fontSize: 13, color: "var(--color-text-secondary)", textTransform: "capitalize" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: colors.dot, flexShrink: 0 }} />
+                {String(item.status || "").replace("_", " ")}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, background: colors.bg, color: colors.text, borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}>{item.total} · {item.percentage ?? 0}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CategoryBars({ items }) {
+  const data = Array.isArray(items) ? items : [];
+  const maxValue = Math.max(0, ...data.map((item) => item.total || 0));
+  if (!maxValue) return <EmptyState>No category pattern is available yet.</EmptyState>;
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      {data.map((item) => (
+        <div key={item.category}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 5, fontSize: 12 }}>
+            <span style={{ color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.category}</span>
+            <span style={{ color: "var(--color-text-tertiary)", fontWeight: 700, whiteSpace: "nowrap" }}>{item.total} · {item.percentage ?? 0}%</span>
+          </div>
+          <div style={{ height: 9, borderRadius: 999, background: "#EEF3F8", overflow: "hidden" }}>
+            <div style={{ width: `${Math.max(4, ((item.total || 0) / maxValue) * 100)}%`, height: "100%", borderRadius: 999, background: "#378ADD" }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EfficiencyCards({ value }) {
+  const data = value || {};
+  const cards = [
+    { label: "Avg. Verify Time", value: formatHours(data.avg_hours_to_verify), tone: "#E6F1FB", color: "#185FA5" },
+    { label: "Avg. Resolve Time", value: formatHours(data.avg_hours_to_resolve), tone: "#EAF3DE", color: "#3B6D11" },
+    { label: "Open Backlog", value: (data.unresolved_backlog ?? 0).toLocaleString(), tone: "#FAEEDA", color: "#854F0B" },
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+      {cards.map((card) => (
+        <div key={card.label} style={{ border: "1px solid #DDE4EE", borderRadius: 12, padding: "14px 14px 12px", background: "#FFFFFF" }}>
+          <div style={{ width: 30, height: 30, borderRadius: 9, background: card.tone, color: card.color, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+            <FaChartLine style={{ fontSize: 13 }} />
+          </div>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-tertiary)" }}>{card.label}</p>
+          <p style={{ margin: "3px 0 0", fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)" }}>{card.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HotspotsList({ items, onOpenMap }) {
+  const data = Array.isArray(items) ? items : [];
+  if (data.length === 0) return <EmptyState>No location hotspots found in this range.</EmptyState>;
+
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      {data.map((item, index) => (
+        <div key={`${item.latitude}-${item.longitude}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: index === data.length - 1 ? "none" : "0.5px solid var(--color-border-tertiary)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: "#EEEDFE", color: "#534AB7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <FaLocationDot style={{ fontSize: 13 }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{item.total} reports · {item.unresolved || 0} open</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{Number(item.latitude).toFixed(3)}, {Number(item.longitude).toFixed(3)}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onOpenMap} style={{ width: 30, height: 30, border: "0.5px solid var(--color-border-secondary)", borderRadius: 8, background: "transparent", color: "var(--color-text-tertiary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} title="Open Map" aria-label="Open Map">
+            <FaArrowUpRightFromSquare style={{ fontSize: 11 }} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Shell({ children }) {
   return (
     <section className="space-y-4">
@@ -271,6 +442,7 @@ export default function OfficialDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [analyticsRange, setAnalyticsRange] = useState("30d");
 
   useEffect(() => {
     let mounted = true;
@@ -278,7 +450,7 @@ export default function OfficialDashboard() {
       try {
         setLoading(true);
         setError("");
-        const payload = await apiAuthRequest("/dashboard");
+        const payload = await apiAuthRequest(`/dashboard?range=${analyticsRange}`);
         if (mounted) setData(payload);
       } catch (err) {
         if (mounted) setError(err.message || "Failed to load dashboard");
@@ -290,7 +462,7 @@ export default function OfficialDashboard() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [analyticsRange]);
 
   const metrics = useMemo(() => {
     if (!data?.kpis) return [];
@@ -334,6 +506,7 @@ export default function OfficialDashboard() {
 
   const triageQueue = data?.sections?.triage_queue || [];
   const recentAlerts = data?.sections?.recent_alerts || [];
+  const analytics = data?.analytics || {};
 
   return (
     <Shell>
@@ -342,6 +515,71 @@ export default function OfficialDashboard() {
           <SectionLabel>Overview</SectionLabel>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             {metrics.map((m, i) => <MetricCard key={m.label} {...m} index={i} />)}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
+            <SectionLabel>Analytics</SectionLabel>
+            <div style={{ display: "inline-flex", padding: 3, border: "1px solid var(--color-border-tertiary)", borderRadius: 10, background: "#FFFFFF", gap: 3 }}>
+              {RANGE_OPTIONS.map((option) => {
+                const active = analyticsRange === option.key;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setAnalyticsRange(option.key)}
+                    style={{
+                      border: "none",
+                      borderRadius: 8,
+                      background: active ? "#185FA5" : "transparent",
+                      color: active ? "#FFFFFF" : "var(--color-text-secondary)",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+            <div style={CARD_STYLE}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Incident Trend</p>
+                <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", fontWeight: 600 }}>{analytics.days || 30} days</span>
+              </div>
+              <TrendChart items={analytics.incident_trend} />
+            </div>
+
+            <div style={CARD_STYLE}>
+              <p style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Workload Status</p>
+              <StatusBreakdown items={analytics.status_breakdown} />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 16 }}>
+            <div style={CARD_STYLE}>
+              <p style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Top Incident Categories</p>
+              <CategoryBars items={analytics.top_categories} />
+            </div>
+
+            <div style={CARD_STYLE}>
+              <p style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Response Efficiency</p>
+              <EfficiencyCards value={analytics.response_efficiency} />
+            </div>
+
+            <div style={CARD_STYLE}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Location Hotspots</p>
+                <button type="button" onClick={() => navigate("/official/map")} style={{ fontSize: 12, fontWeight: 500, color: "#185FA5", background: "#E6F1FB", border: "none", padding: "4px 12px", borderRadius: 999, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>Open Map <FaArrowUpRightFromSquare style={{ fontSize: 10 }} /></button>
+              </div>
+              <HotspotsList items={analytics.hotspots} onOpenMap={() => navigate("/official/map")} />
+            </div>
           </div>
         </div>
 
